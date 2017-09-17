@@ -3,6 +3,7 @@
 import math
 import random
 import itertools
+import inspect
 
 def TypeFactory(v):
     if issubclass(type(v), Type):
@@ -21,10 +22,10 @@ class Type():
 class Generic(Type):
     def __init__(self, typ):
         super().__init__()
-        assert isinstance(t, type)
+        assert isinstance(typ, type)
         self.type = typ
     def test(self, v):
-        assert isinstance(type(v), self.type)
+        assert isinstance(v, self.type)
     def generate(self):
         raise NotImplementedError
 
@@ -140,7 +141,6 @@ class Dict(Type):
             self.valtype.test(e)
     def generate(self):
         return [{}, dict(zip(self.keytype.generate(), self.valtype.generate()))]
-            
 
 class And(Type):
     def __init__(self, *types):
@@ -198,12 +198,21 @@ def returns(returntype):
         decorated.__returns__ = t
         return decorated
     return decorator
-    
-# def requires(condition):
-#     def decorator(func):
-#         c = compile(condition, "verifier", "exec")
-#         def decorated(*args, **kwargs):
-#             eval(c)
+
+# TODO save list of conditions so we only use one stack frame in
+# accepts, returns, and requires.
+def requires(condition):
+    def decorator(func):
+        def decorated(*args, **kwargs):
+            argspec = inspect.getargspec(func)
+            extra_locals = {k : v for k,v in zip(argspec.args, args)}
+            full_locals = locals().copy()
+            full_locals.update(extra_locals)
+            full_locals.update(kwargs)
+            assert eval(condition, globals(), full_locals)
+            return func(*args, **kwargs)
+        return decorated
+    return decorator
 
 def test_function(func):
     assert hasattr(func, "__accepts__"), "No argument annotations"
@@ -212,8 +221,9 @@ def test_function(func):
         print(p)
         func(*p)
 
-@accepts(Number(), Number())
-@returns(Number())
+#@accepts(Number(), Number())
+#@returns(Number())
+@requires("n < m")
 def add(n, m):
     return n+m
 
