@@ -76,27 +76,39 @@ class Range(Number):
     def test(self, v):
         super().test(v)
         assert self.low <= v <= self.high
-    def generate(self):
-        vals = [self.low, self.high]
+    def _generate_quantiles(self):
+        EPSILON = 1e-5
         if not (math.isinf(self.low) or math.isinf(self.high)):
             l = self.low
             h = self.high
-            vals.append([(l+h)*.5, (l+h)*.25, (l+h)*.75])
-        return vals
+            return [(l+h)*EPSILON, (l+h)*.5, (l+h)*.25, (l+h)*.75 (l+h)*(1-EPSILON)]
+        elif math.isinf(self.low):
+            return [self.high-EPSILON]
+        elif math.isinf(self.high):
+            return [self.low-EPSILON]
+        raise ValueError
+    def generate(self):
+        return [self.low, self.high] + self._generate_quantiles()
 
 class RangeClosedOpen(Range):
     def test(self, v):
         super().test(v)
         assert v != self.high
+    def generate(self):
+        return [self.low] + self._generate_quantiles()
 
 class RangeOpenClosed(Range):
     def test(self, v):
         super().test(v)
         assert v != self.low
+    def generate(self):
+        return [self.high] + self._generate_quantiles()
 
 class RangeOpen(RangeClosedOpen, RangeOpenClosed):
     def test(self, v):
         super().test(v)
+    def generate(self):
+        return self._generate_quantiles()
 
 class Set(Type):
     def __init__(self, els):
@@ -204,10 +216,15 @@ def returns(returntype):
 def requires(condition):
     def decorator(func):
         def decorated(*args, **kwargs):
-            argspec = inspect.getargspec(func)
-            extra_locals = {k : v for k,v in zip(argspec.args, args)}
             full_locals = locals().copy()
-            full_locals.update(extra_locals)
+            argspec = inspect.getargspec(func)
+            # Function named arguments
+            full_locals.update({k : v for k,v in zip(argspec.args, args)})
+            # Unnamed positional arguments
+            if argspec.varargs is not None:
+                positional_args = {argspec.varargs: args[len(argspec.args):]}
+                full_locals.update(positional_args)
+            # kw arguments
             full_locals.update(kwargs)
             assert eval(condition, globals(), full_locals)
             return func(*args, **kwargs)
@@ -229,4 +246,4 @@ def add(n, m):
 
 add(4, 5)
 
-test_function(add)
+#test_function(add)
