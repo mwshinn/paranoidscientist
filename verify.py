@@ -30,6 +30,12 @@ class Generic(Type):
     def generate(self):
         raise NotImplementedError
 
+class Nothing(Type):
+    def test(self, v):
+        assert v is None
+    def generate(self):
+        return [None]
+
 class Numeric(Type):
     def test(self, v):
         super().test(v)

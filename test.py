@@ -95,3 +95,17 @@ addthree(4)
 addthree(5)
 fails(lambda : addthree(9))
 fails(lambda : addthree(2))
+
+@accepts(String)
+@returns(Nothing)
+def pass_it(s):
+    pass
+
+pass_it("ars")
+
+@accepts(String)
+@returns(Nothing)
+def dont_pass_it(s):
+    return False
+
+fails(lambda : dont_pass_it("ars"))
