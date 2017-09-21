@@ -4,6 +4,7 @@ import math
 import random
 import itertools
 import inspect
+import functools
 
 def TypeFactory(v):
     if issubclass(type(v), Type):
@@ -175,61 +176,121 @@ class Or(Type):
         if passed == False:
             raise AssertionError
 
-def accepts(*argtypes, **kwargtypes):
-    assert len(argtypes)+len(kwargtypes) > 0, "No arguments to accepts"
-    def decorator(func):
-        assert not hasattr(func, "__accepts__")
-        targs = [TypeFactory(a) for a in argtypes]
-        tkwargs = {k : TypeFactory(a) for k,a in kwargtypes.items()}
-        def decorated(*args, **kwargs):
-            assert len(argtypes) == len(args), \
-                "Invalid number of decorator arguments"
-            assert all(k in kwargs.keys() for k in kwargtypes.keys()), \
-                "Invalid decorator keyword argument"
-            for i,t in enumerate(targs):
-                t.test(args[i])
-            for k,t in tkwargs.items():
-                t.test(kwargs[k])
-            return func(*args, **kwargs)
-        decorated.__dict__ = func.__dict__
-        decorated.__verified__ = True
-        decorated.__accepts__ = (targs, tkwargs)
-        return decorated
-    return decorator
+_FUN_PROPS = "__verify__"
+def has_fun_prop(f, k):
+    if not hasattr(f, _FUN_PROPS):
+        return False
+    if not isinstance(getattr(f, _FUN_PROPS), dict):
+        return False
+    if k not in getattr(f, _FUN_PROPS).keys():
+        return False
+    return True
 
-def returns(returntype):
-    t = TypeFactory(returntype)
-    def decorator(func):
-        assert not hasattr(func, "__returns__")
-        def decorated(*args, **kwargs):
-            retval = func(*args, **kwargs)
-            t.test(retval)
-            return retval
-        decorated.__dict__ = func.__dict__
-        decorated.__verified__ = True
-        decorated.__returns__ = t
-        return decorated
-    return decorator
+def get_fun_prop(f, k):
+    assert has_fun_prop(f, k)
+    return getattr(f, _FUN_PROPS)[k]
 
-# TODO save list of conditions so we only use one stack frame in
-# accepts, returns, and requires.
-def requires(condition):
-    def decorator(func):
-        def decorated(*args, **kwargs):
-            full_locals = locals().copy()
+def set_fun_prop(f, k, v):
+    if not hasattr(f, _FUN_PROPS):
+        setattr(f, _FUN_PROPS, {})
+    if not isinstance(getattr(f, _FUN_PROPS), dict):
+        raise ValueError("Invalid function properties dictionary")
+    getattr(f, _FUN_PROPS)[k] = v
+
+def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=None, ensures=None):
+    # @accepts decorator
+    if argtypes is not None:
+        argtypes = [TypeFactory(a) for a in argtypes]
+        if has_fun_prop(func, "argtypes"):
+            raise ValueError("Already set argument types")
+        set_fun_prop(func, "argtypes", argtypes)
+    if kwargtypes is not None:
+        kwargtypes = {k : TypeFactory(a) for k,a in kwargtypes.items()}
+        if has_fun_prop(func, "kwargtypes"):
+            raise ValueError("Already set kw argument types")
+        set_fun_prop(func, "kwargtypes", kwargtypes)
+    # @returns decorator
+    if returntype is not None:
+        returntype = TypeFactory(returntype)
+        if has_fun_prop(func, "returntype"):
+            raise ValueError("Already set return type")
+        set_fun_prop(func, "returntype", returntype)
+    # @requires decorator
+    if requires is not None:
+        if has_fun_prop(func, "requires"):
+            assert isinstance(get_fun_prop(func, "requires"), list)
+            base_requires = get_fun_prop(func, "requires")
+        else:
+            base_requires = []
+        set_fun_prop(func, "requires", [requires]+base_requires)
+    # @ensures decorator
+    if ensures is not None:
+        if has_fun_prop(func, "ensures"):
+            assert isinstance(get_fun_prop(func, "ensures"), list)
+            base_ensures = get_fun_prop(func, "ensures")
+        else:
+            base_ensures = []
+        set_fun_prop(func, "ensures", [ensures]+base_ensures)
+    def decorated(*args, **kwargs):
+        # @accepts decorator
+        if has_fun_prop(func, "argtypes") and has_fun_prop(func, "kwargtypes"):
+            argtypes = get_fun_prop(func, "argtypes")
+            kwargtypes = get_fun_prop(func, "kwargtypes")
+            if argtypes:
+                assert len(argtypes) == len(args)
+                for i,t in enumerate(argtypes):
+                    t.test(args[i])
+            if kwargtypes:
+                assert all(k in kwargs.keys() for k in kwargtypes.keys())
+                for k,t in kwargtypes.items():
+                    t.test(kwargs[k])
+        # @requires decorator
+        if has_fun_prop(func, "requires"):
             argspec = inspect.getargspec(func)
             # Function named arguments
-            full_locals.update({k : v for k,v in zip(argspec.args, args)})
+            #full_locals = locals().copy()
+            #full_locals.update({k : v for k,v in zip(argspec.args, args)})
+            full_locals = {k : v for k,v in zip(argspec.args, args)}
             # Unnamed positional arguments
             if argspec.varargs is not None:
                 positional_args = {argspec.varargs: args[len(argspec.args):]}
                 full_locals.update(positional_args)
-            # kw arguments
-            full_locals.update(kwargs)
-            assert eval(condition, globals(), full_locals)
-            return func(*args, **kwargs)
-        return decorated
-    return decorator
+            # TODO kw arguments
+            for requirement in get_fun_prop(func, "requires"):
+                assert eval(requirement, globals(), full_locals)
+        # The actual function
+        returnvalue = func(*args, **kwargs)
+        # @returns decorator
+        if has_fun_prop(func, "returntype"):
+            get_fun_prop(func, "returntype").test(returnvalue)
+        # @ensures decorator
+        if has_fun_prop(func, "ensures"):
+            argspec = inspect.getargspec(func)
+            # Function named arguments
+            limited_locals = {k : v for k,v in zip(argspec.args, args)}
+            # Unnamed positional arguments
+            if argspec.varargs is not None:
+                positional_args = {argspec.varargs: args[len(argspec.args):]}
+                limited_locals.update(positional_args)
+            # TODO kw arguments
+            for ensurement in get_fun_property(func, "ensures"):
+                assert eval(ensurement, globals(), limited_locals)
+        return returnvalue
+    # We have already wrapped this function
+    if has_fun_prop(func, "active"):
+        return func
+    else:
+        set_fun_prop(func, "active", True)
+        assign = functools.WRAPPER_ASSIGNMENTS + (_FUN_PROPS,)
+        return functools.wraps(func, assigned=assign)(decorated)
+
+
+def accepts(*argtypes, **kwargtypes):
+    return lambda f : _decorator(f, argtypes=argtypes, kwargtypes=kwargtypes)
+def returns(returntype):
+    return lambda f : _decorator(f, returntype=returntype)
+def requires(condition):
+    return lambda f : _decorator(f, requires=condition)
 
 def test_function(func):
     assert hasattr(func, "__accepts__"), "No argument annotations"
