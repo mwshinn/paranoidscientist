@@ -7,6 +7,8 @@ import inspect
 import functools
 from exceptions import *
 
+_FUN_PROPS = "__verify__"
+
 def TypeFactory(v):
     if issubclass(type(v), Type):
         return v
@@ -95,7 +97,7 @@ class Range(Number):
             return [self.high-EPSILON]
         elif math.isinf(self.high):
             return [self.low-EPSILON]
-        raise ValueError("Invalid Range bounds")
+        raise AssertionError("Invalid Range bounds")
     def generate(self):
         return [self.low, self.high] + self._generate_quantiles()
 
@@ -184,7 +186,6 @@ class Or(Type):
         if passed == False:
             raise AssertionError("Neither type in Or holds")
 
-_FUN_PROPS = "__verify__"
 def has_fun_prop(f, k):
     if not hasattr(f, _FUN_PROPS):
         return False
@@ -195,14 +196,15 @@ def has_fun_prop(f, k):
     return True
 
 def get_fun_prop(f, k):
-    assert has_fun_prop(f, k), "Function %s has no property %s" % (str(f), k)
+    if not has_fun_prop(f, k):
+        raise InternalError("Function %s has no property %s" % (str(f), k))
     return getattr(f, _FUN_PROPS)[k]
 
 def set_fun_prop(f, k, v):
     if not hasattr(f, _FUN_PROPS):
         setattr(f, _FUN_PROPS, {})
     if not isinstance(getattr(f, _FUN_PROPS), dict):
-        raise ValueError("Invalid function properties dictionary for %s" % str(f))
+        raise InternalError("Invalid function properties dictionary for %s" % str(f))
     getattr(f, _FUN_PROPS)[k] = v
 
 def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=None, ensures=None):
@@ -226,7 +228,8 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
     # @requires decorator
     if requires is not None:
         if has_fun_prop(func, "requires"):
-            assert isinstance(get_fun_prop(func, "requires"), list)
+            if not isinstance(get_fun_prop(func, "requires"), list):
+                raise InternalError("Invalid requires structure")
             base_requires = get_fun_prop(func, "requires")
         else:
             base_requires = []
@@ -234,7 +237,8 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
     # @ensures decorator
     if ensures is not None:
         if has_fun_prop(func, "ensures"):
-            assert isinstance(get_fun_prop(func, "ensures"), list)
+            if not isinstance(get_fun_prop(func, "ensures"), list):
+                raise InternalError("Invalid ensures strucutre")
             base_ensures = get_fun_prop(func, "ensures")
         else:
             base_ensures = []
@@ -245,13 +249,21 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
             argtypes = get_fun_prop(func, "argtypes")
             kwargtypes = get_fun_prop(func, "kwargtypes")
             if argtypes:
-                assert len(argtypes) == len(args), "Invalid number of arguments"
+                if len(argtypes) != len(args):
+                    raise ArgumentTypeError("Invalid argument specification to @accepts")
                 for i,t in enumerate(argtypes):
-                    t.test(args[i])
+                    try:
+                        t.test(args[i])
+                    except AssertionError as e:
+                        raise ArgumentTypeError("Invalid argument type %s" % args[i])
             if kwargtypes:
-                assert all(k in kwargs.keys() for k in kwargtypes.keys()), "Invalid keyword arguments"
+                if all(k in kwargs.keys() for k in kwargtypes.keys()):
+                    raise ArgumentTypeError("Invalid keyword argument specification to @accepts")
                 for k,t in kwargtypes.items():
-                    t.test(kwargs[k])
+                    try:
+                        t.test(kwargs[k])
+                    except AssertionError as e:
+                        raise ArgumentTypeError("Invalid argument type for %s: %s" % (k, kwargs[k]))
         # @requires decorator
         if has_fun_prop(func, "requires"):
             argspec = inspect.getargspec(func)
@@ -265,12 +277,16 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
                 full_locals.update(positional_args)
             # TODO kw arguments
             for requirement in get_fun_prop(func, "requires"):
-                assert eval(requirement, globals(), full_locals), "Function requirement failed"
+                if not eval(requirement, globals(), full_locals):
+                    raise EntryConditionsError("Function requirement '%s' failed" % requirement)
         # The actual function
         returnvalue = func(*args, **kwargs)
         # @returns decorator
         if has_fun_prop(func, "returntype"):
-            get_fun_prop(func, "returntype").test(returnvalue)
+            try:
+                get_fun_prop(func, "returntype").test(returnvalue)
+            except AssertionError as e:
+                raise ReturnTypeError("Invalid return type of %s" % returnvalue )
         # @ensures decorator
         if has_fun_prop(func, "ensures"):
             argspec = inspect.getargspec(func)
@@ -285,7 +301,8 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
             # TODO kw arguments
             for ensurement in get_fun_prop(func, "ensures"):
                 e = ensurement.replace("return", "__RETURN__")
-                assert eval(e, globals(), limited_locals), "Ensures statement failed"
+                if not eval(e, globals(), limited_locals):
+                    raise ExitConditionsError("Ensures statement '%s' failed" % ensurement)
         return returnvalue
     # We have already wrapped this function
     if has_fun_prop(func, "active"):
@@ -306,15 +323,14 @@ def ensures(condition):
     return lambda f : _decorator(f, ensures=condition)
 
 def test_function(func):
-    assert hasattr(func, "__accepts__"), "No argument annotations"
-    assert len(func.__accepts__[1]) == 0 # TODO kwargs
-    for p in itertools.product(*[e.generate() for e in func.__accepts__[0]]):
+    assert hasattr(func, _FUN_PROPS), "No argument annotations"
+    for p in itertools.product(*[e.generate() for e in get_fun_prop(func, "argtypes")]):
         print(p)
         func(*p)
 
-#@accepts(Number(), Number())
-#@returns(Number())
-@requires("n < m")
+@accepts(Number(), Number())
+@returns(Number())
+#@requires("n < m")
 @ensures("return == n + m")
 @ensures("return >= m + n")
 def add(n, m):

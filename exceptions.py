@@ -21,3 +21,5 @@ class InvalidTypeError(VerifyError):
 class NoGeneratorError(VerifyError):
     pass
 
+class InternalError(VerifyError):
+    pass
