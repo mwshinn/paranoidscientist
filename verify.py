@@ -308,12 +308,12 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
             # TODO kw arguments
             for ensurement in get_fun_prop(func, "ensures"):
                 e = ensurement.replace("return", "__RETURN__")
-                if "<=>" in e:
-                    e_parts = e.split("<=>")
+                if "<-->" in e:
+                    e_parts = e.split("<-->")
                     assert len(e_parts) == 2, "Only one implies per statement"
                     e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
-                if "=>" in e:
-                    e_parts = e.split("=>")
+                if "-->" in e: # TODO won't throw error if --> and <--> are in e
+                    e_parts = e.split("-->")
                     assert len(e_parts) == 2, "Only one implies per statement"
                     e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
                 if "`" in e:
