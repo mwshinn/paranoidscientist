@@ -109,3 +109,32 @@ def dont_pass_it(s):
     return False
 
 fails(lambda : dont_pass_it("ars"))
+
+@accepts(Number())
+@returns(Number())
+@ensures("n` <= n <=> return` <= return")
+def monotonic(n):
+    return n**3
+
+monotonic(-3)
+monotonic(-2)
+monotonic(-1)
+
+test_function(monotonic)
+
+@accepts(Number(), Number())
+@returns(Number())
+@requires("n < m")
+@ensures("return == n + m")
+@ensures("return >= m + n")
+@ensures("m > 0 and n > 0 => return > 0")
+@ensures("m` >= m and n` >= n => return` >= return")
+def add(n, m):
+    return n+m
+
+add(0, 5)
+add(0, 6)
+add(0, 3)
+
+test_function(add)
+

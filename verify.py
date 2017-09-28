@@ -298,10 +298,33 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
             if argspec.varargs is not None:
                 positional_args = {argspec.varargs: args[len(argspec.args):]}
                 limited_locals.update(positional_args)
+            if any("`" in ens for ens in get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
+                if has_fun_prop(func, "exec_cache"):
+                   exec_cache = get_fun_prop(func, "exec_cache")
+                else:
+                   exec_cache = []
+                exec_cache.append(limited_locals.copy())
+                set_fun_prop(func, "exec_cache", exec_cache) #TODO is this line necessary?
             # TODO kw arguments
             for ensurement in get_fun_prop(func, "ensures"):
                 e = ensurement.replace("return", "__RETURN__")
-                if not eval(e, globals(), limited_locals):
+                if "<=>" in e:
+                    e_parts = e.split("<=>")
+                    assert len(e_parts) == 2, "Only one implies per statement"
+                    e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
+                if "=>" in e:
+                    e_parts = e.split("=>")
+                    assert len(e_parts) == 2, "Only one implies per statement"
+                    e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
+                if "`" in e:
+                    bt = "__BACKTICK__"
+                    exec_cache = get_fun_prop(func, "exec_cache")
+                    for cache_item in exec_cache:
+                        limited_locals.update({k+bt : v for k,v in cache_item.items()})
+                        e = e.replace("`", bt)
+                        if not eval(e, globals(), limited_locals):
+                            raise ExitConditionsError("Ensures statement '%s' failed" % ensurement)
+                elif not eval(e, globals(), limited_locals):
                     raise ExitConditionsError("Ensures statement '%s' failed" % ensurement)
         return returnvalue
     # We have already wrapped this function
@@ -325,18 +348,8 @@ def ensures(condition):
 def test_function(func):
     assert hasattr(func, _FUN_PROPS), "No argument annotations"
     for p in itertools.product(*[e.generate() for e in get_fun_prop(func, "argtypes")]):
-        print(p)
-        func(*p)
+        try:
+            func(*p)
+        except EntryConditionsError:
+            continue
 
-@accepts(Number(), Number())
-@returns(Number())
-#@requires("n < m")
-@ensures("return == n + m")
-@ensures("return >= m + n")
-def add(n, m):
-    return n+m
-
-add(4, 5)
-add(0, 5)
-
-#test_function(add)
