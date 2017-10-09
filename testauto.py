@@ -89,7 +89,7 @@ def myfun(mt):
 myfun(MyType(1))
 fails(lambda : myfun("abc"))
 
-@accepts(And(Natural0(), Range(low=4, high=7)))
+@accepts(And(Natural0(), Or(Range(low=4, high=7), Range(low=12, high=15))))
 @returns(Natural1())
 def addthree(a):
     return a+3

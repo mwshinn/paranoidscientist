@@ -176,8 +176,17 @@ class And(Type):
         for t in self.types:
             t.test(v)
     def generate(self):
-        type_sets = [set(t.generate()) for t in self.types]
-        return set.intersection(*type_sets)
+        all_generated = [e for t in self.types for e in t.generate()]
+        valid_generated = []
+        for g in all_generated:
+            try:
+                for t in self.types:
+                    t.test(g)
+            except AssertionError:
+                continue
+            else:
+                valid_generated.append(g)
+        return valid_generated
 
 class Or(Type):
     def __init__(self, *types):
@@ -192,6 +201,8 @@ class Or(Type):
                 continue
         if passed == False:
             raise AssertionError("Neither type in Or holds")
+    def generate(self):
+        return [e for t in self.types for e in t.generate()]
 
 def has_fun_prop(f, k):
     if not hasattr(f, _FUN_PROPS):
