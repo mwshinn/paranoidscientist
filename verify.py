@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import sys
 import math
 import random
 import itertools
@@ -31,7 +32,10 @@ class Generic(Type):
     def test(self, v):
         assert isinstance(v, self.type)
     def generate(self):
-        raise NoGeneratorError
+        if hasattr(self.type, "_generate") and callable(self.type._generate):
+            return self.type._generate()
+        else:
+            raise NoGeneratorError
 
 class Nothing(Type):
     def test(self, v):
@@ -86,13 +90,13 @@ class Range(Number):
         self.high = high if low is not None else math.inf
     def test(self, v):
         super().test(v)
-        assert self.low <= v <= self.high, "Range must be greater than %f and less than %f" % (self.low, self.high)
+        assert self.low <= v <= self.high, "Value %f must be greater than %f and less than %f" % (v, self.low, self.high)
     def _generate_quantiles(self):
         EPSILON = 1e-5
         if not (math.isinf(self.low) or math.isinf(self.high)):
             l = self.low
             h = self.high
-            return [(l+h)*EPSILON, (l+h)*.5, (l+h)*.25, (l+h)*.75 (l+h)*(1-EPSILON)]
+            return [(l+h)*EPSILON, (l+h)*.5, (l+h)*.25, (l+h)*.75, (l+h)*(1-EPSILON)]
         elif math.isinf(self.low):
             return [self.high-EPSILON]
         elif math.isinf(self.high):
@@ -171,6 +175,9 @@ class And(Type):
     def test(self, v):
         for t in self.types:
             t.test(v)
+    def generate(self):
+        type_sets = [set(t.generate()) for t in self.types]
+        return set.intersection(*type_sets)
 
 class Or(Type):
     def __init__(self, *types):
@@ -333,8 +340,10 @@ def _decorator(func, argtypes=None, kwargtypes=None, returntype=None, requires=N
     else:
         set_fun_prop(func, "active", True)
         assign = functools.WRAPPER_ASSIGNMENTS + (_FUN_PROPS,)
-        return functools.wraps(func, assigned=assign)(decorated)
-
+        wrapped = functools.wraps(func, assigned=assign)(decorated)
+        global __ALL_FUNCTIONS
+        __ALL_FUNCTIONS.append(wrapped)
+        return wrapped
 
 def accepts(*argtypes, **kwargtypes):
     return lambda f : _decorator(f, argtypes=argtypes, kwargtypes=kwargtypes)
@@ -347,9 +356,29 @@ def ensures(condition):
 
 def test_function(func):
     assert hasattr(func, _FUN_PROPS), "No argument annotations"
-    for p in itertools.product(*[e.generate() for e in get_fun_prop(func, "argtypes")]):
-        try:
-            func(*p)
-        except EntryConditionsError:
-            continue
+    try:
+        testcases = itertools.product(*[e.generate() for e in get_fun_prop(func, "argtypes")])
+        if not testcases:
+            print("Warning: %s could not be tested" % func.__name__)
+        for tc in testcases:
+            try:
+                func(*tc)
+            except EntryConditionsError:
+                continue
+    except NoGeneratorError:
+        print("Warning: %s could not be tested" % func.__name__)
 
+if __name__ != "__main__":
+    __ALL_FUNCTIONS = []
+
+if __name__ == "__main__":
+    assert len(sys.argv) == 2, "Invalid argument, please pass a python file"
+    globs = {}
+    exec(open(sys.argv[1], "r").read()+"\n\nimport verify as __verify", globs)
+    all_functions = globs["__verify"].__ALL_FUNCTIONS
+    for f in all_functions:
+        assert hasattr(f, '__verify__')
+        print("    Testing %s..." % f.__name__, end="")
+        test_function(f)
+        print("\b"*len("    Testing %s..." % f.__name__)+"    Tested %s    " % f.__name__)
+    print("Finished testing %i functions in %s." % (len(all_functions), sys.argv[1]))

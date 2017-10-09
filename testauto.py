@@ -27,12 +27,11 @@ def add(n, m):
 add(4, 5)
 
 @accepts(Range(-1, 1))
-@returns(Range(0, .9))
+@returns(Range(0, 1))
 def square(n):
     return n*n
 
 square(.3)
-fails(lambda : square(.999))
 
 @accepts(RangeClosedOpen(-1, 1))
 @returns(Range(0, 1))
@@ -51,7 +50,7 @@ square(1)
 fails(lambda : square(-1))
 
 @accepts(RangeOpen(-1, 1))
-@returns(RangeOpen(0, 1))
+@returns(RangeClosedOpen(0, 1))
 def square(n):
     return n*n
 
@@ -77,6 +76,10 @@ fails(lambda : ident({"a" : 33, "b" : 901.90, 22 : 22}))
 class MyType:
     def __init__(self, val):
         self.val = val
+    @staticmethod
+    def _generate():
+        vals = ["string", 3, 11]
+        return [MyType(v) for v in vals]
 
 @accepts(MyType)
 @returns(MyType)
@@ -102,13 +105,6 @@ def pass_it(s):
     pass
 
 pass_it("ars")
-
-@accepts(String)
-@returns(Nothing)
-def dont_pass_it(s):
-    return False
-
-fails(lambda : dont_pass_it("ars"))
 
 @accepts(Number())
 @returns(Number())
