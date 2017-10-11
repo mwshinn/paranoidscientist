@@ -2,7 +2,6 @@
 
 import sys
 import math
-import random
 import itertools
 import inspect
 import functools
@@ -27,12 +26,30 @@ def TypeFactory(v):
         return v()
     elif issubclass(type(v), type):
         return Generic(v)
+    elif v is None:
+        return Nothing()
     else:
         raise InvalidTypeError("Invalid type %s" % v)
 
 class Type():
+    """The base Type, from which all variable types should inherit.
+
+    What is a Type?  While "types" can include standard types built
+    into the programming language (e.g. int, float, string), they can
+    also be more flexible. For example, you can have a "natural
+    numbers" type, or a "range" type, or even a "file path" type.
+
+    All types must inherit from this class.  They must define the
+    "test" and "generate" functions.
+    """
     def test(self, v):
+        """Check whether `v` is a valid value of this type.  Throws an
+        assertion error if `v` is not a valid value.
+        """
         pass
+    def generate(self):
+        """Generate a list of values of this type."""
+        raise NotImplementedError("Please subclass Type")
 
 class Generic(Type):
     def __init__(self, typ):
@@ -41,19 +58,24 @@ class Generic(Type):
         self.type = typ
     def test(self, v):
         assert isinstance(v, self.type)
+        if hasattr(self.type, "_test") and callable(self.type._test):
+            return self.type._test(v)
     def generate(self):
         if hasattr(self.type, "_generate") and callable(self.type._generate):
             return self.type._generate()
         else:
-            raise NoGeneratorError
+            raise NoGeneratorError("Please define a _generate() function in "
+                                   "class %s." % self.type.__name__)
 
 class Nothing(Type):
+    """The None type."""
     def test(self, v):
         assert v is None
     def generate(self):
         return [None]
 
 class Numeric(Type):
+    """Any integer or float, including inf, -inf, and nan."""
     def test(self, v):
         super().test(v)
         assert isinstance(v, (int, float)), "Invalid numeric"
@@ -62,6 +84,7 @@ class Numeric(Type):
         return [math.inf, -math.inf, math.nan, 0, 1, -1, 3.141, 1e-10, 1e10]
 
 class Number(Numeric):
+    """Any integer or float, excluding inf, -inf, and nan."""
     def test(self, v):
         super().test(v)
         assert isinstance(v, (int, float)), "Invalid number"
@@ -71,13 +94,15 @@ class Number(Numeric):
         return [0, 1, -1, 3.141, 1e-10, 1e10]
 
 class Integer(Number):
+    """Any integer."""
     def test(self, v):
         super().test(v)
         assert v // 1 == v, "Invalid integer"
     def generate(self):
         return [-100, -1, 0, 1, 100]
 
-class Natural0(Integer):
+class Natural(Integer):
+    """Any natural number including 0."""
     def test(self, v):
         super().test(v)
         assert v >= 0, "Must be greater than or equal to 0"
@@ -85,6 +110,7 @@ class Natural0(Integer):
         return [0, 1, 10, 100]
 
 class Natural1(Natural0):
+    """Any natural number excluding 0."""
     def test(self, v):
         super().test(v)
         assert v > 0, "Must be greater than 0"
@@ -92,15 +118,19 @@ class Natural1(Natural0):
         return [1, 2, 10, 100]
 
 class Range(Number):
+    """Any integer or float from `low` to `high`, inclusive."""
     def __init__(self, low, high):
         super().__init__()
-        assert isinstance(low, (float, int)) and isinstance(high, (float, int)), "Invalid bounds"
-        assert low < high, "Low %s must be strictly greater than high %s" % (low, high)
+        assert isinstance(low, (float, int)) and \
+            isinstance(high, (float, int)), "Invalid bounds"
+        assert low < high, \
+            "Low %s must be strictly greater than high %s" % (low, high)
         self.low = low if low is not None else -math.inf
         self.high = high if low is not None else math.inf
     def test(self, v):
         super().test(v)
-        assert self.low <= v <= self.high, "Value %f must be greater than %f and less than %f" % (v, self.low, self.high)
+        assert self.low <= v <= self.high, "Value %f must be greater" \
+            "than %f and less than %f" % (v, self.low, self.high)
     def _generate_quantiles(self):
         EPSILON = 1e-5
         if not (math.isinf(self.low) or math.isinf(self.high)):
@@ -130,6 +160,7 @@ class RangeOpenClosed(Range):
         return [self.high] + self._generate_quantiles()
 
 class RangeOpen(RangeClosedOpen, RangeOpenClosed):
+    """Any integer or float greater than `low` and less than `high`."""
     def test(self, v):
         super().test(v)
     def generate(self):
@@ -142,7 +173,7 @@ class Set(Type):
         self.els = els
     def test(self, v):
         super().test(v)
-        assert v in self.els, "Value %v in set" % v
+        assert v in self.els, "Value %s in set" % v
     def generate(self):
         return [e for e in self.els]
 
@@ -167,6 +198,7 @@ class List(Type):
 
 class Dict(Type):
     def __init__(self, k, v):
+        super().__init__()
         self.valtype = TypeFactory(v)
         self.keytype = TypeFactory(k)
     def test(self, v):
@@ -181,6 +213,7 @@ class Dict(Type):
 
 class And(Type):
     def __init__(self, *types):
+        super().__init__()
         self.types = [TypeFactory(a) for a in types]
     def test(self, v):
         for t in self.types:
@@ -200,6 +233,7 @@ class And(Type):
 
 class Or(Type):
     def __init__(self, *types):
+        super().__init__()
         self.types = [TypeFactory(a) for a in types]
     def test(self, v):
         passed = False
@@ -209,7 +243,7 @@ class Or(Type):
                 passed = True
             except AssertionError:
                 continue
-        if passed == False:
+        if not passed:
             raise AssertionError("Neither type in Or holds")
     def generate(self):
         return [e for t in self.types for e in t.generate()]
@@ -322,9 +356,9 @@ def _wrap(func):
                 limited_locals.update(positional_args)
             if any("`" in ens for ens in get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
                 if has_fun_prop(func, "exec_cache"):
-                   exec_cache = get_fun_prop(func, "exec_cache")
+                    exec_cache = get_fun_prop(func, "exec_cache")
                 else:
-                   exec_cache = []
+                    exec_cache = []
                 exec_cache.append(limited_locals.copy())
                 set_fun_prop(func, "exec_cache", exec_cache) #TODO is this line necessary?
             # TODO kw arguments
@@ -356,7 +390,6 @@ def _wrap(func):
         assign = functools.WRAPPER_ASSIGNMENTS + (_FUN_PROPS,)
         wrapped = functools.wraps(func, assigned=assign)(_decorated)
         if "__ALL_FUNCTIONS" in globals().keys():
-            global __ALL_FUNCTIONS
             __ALL_FUNCTIONS.append(wrapped)
         return wrapped
     
@@ -488,8 +521,6 @@ if __name__ == "__main__":
         start_text = "    Testing %s..." % f.__name__
         print(start_text, end="", flush=True)
         test_function(f)
-        import time
-        time.sleep(1)
         # Extra spaces after "Tested %s" compensate for the fact that
         # the string to signal the start of testing function f is
         # longer than the string to signal function f has been tested,
