@@ -101,7 +101,7 @@ class Integer(Number):
     def generate(self):
         return [-100, -1, 0, 1, 100]
 
-class Natural(Integer):
+class Natural0(Integer):
     """Any natural number including 0."""
     def test(self, v):
         super().test(v)
