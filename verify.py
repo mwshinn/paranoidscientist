@@ -6,6 +6,7 @@ import itertools
 import inspect
 import functools
 from exceptions import *
+from copy import deepcopy
 
 _FUN_PROPS = "__verify__"
 
@@ -470,6 +471,10 @@ def ensures(condition):
         return _wrap(func)
     return _decorator
 
+def mutable_argument(func):
+    set_fun_prop(func, "mutable_argument", True)
+    return _wrap(func)
+
 def test_function(func):
     """Perform a unit test of a single function.
 
@@ -501,10 +506,33 @@ def test_function(func):
     # enough of a test, since all values are checked at runtime.  So
     # execute the function once for each combination of arguments.
     for tc in testcases:
+        # Function argument comparison: Allow testing for function
+        # arguments which were modified.  To do so, first save an
+        # extra copy of the testcase.
+        if not has_fun_prop(func, "mutable_argument"):
+            prev_args = deepcopy(tc)
+        # Try evalueating the function for the given testcase in the
+        # loop.
         try:
             func(*tc)
         except EntryConditionsError:
             continue
+        # Function argument comparison: To finish comparing arguments,
+        # test the arguments for equality.  We cannot check for simple
+        # equality because many objects have identity equality
+        # built-in, so testing from a deepcopy is guaranteed to fail,
+        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
+        # property, we try comparing that.  Otherwise, we compare the
+        # value.
+        # TODO this may still fail in some cases.
+        if not has_fun_prop(func, "mutable_argument"):
+            for a1,a2 in zip(prev_args, tc):
+                if hasattr(a1, "__dict__"):
+                    if a1.__dict__ != a2.__dict__:
+                        raise ObjectModifiedError
+                else:
+                    if a1 != a2:
+                        raise ObjectModifiedError
 
 # If called as "python3 -m verify script_file_name.py", then unit test
 # script_file_name.py.  By this, we mean call the function

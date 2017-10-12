@@ -23,3 +23,6 @@ class NoGeneratorError(VerifyError):
 
 class InternalError(VerifyError):
     pass
+
+class ObjectModifiedError(VerifyError):
+    pass
