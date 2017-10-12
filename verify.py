@@ -146,6 +146,7 @@ class Range(Number):
         return [self.low, self.high] + self._generate_quantiles()
 
 class RangeClosedOpen(Range):
+    """A half open interval from `low` (closed) to `high` (open)."""
     def test(self, v):
         super().test(v)
         assert v != self.high, "Value must be strictly greater than %f" % self.high
@@ -153,6 +154,7 @@ class RangeClosedOpen(Range):
         return [self.low] + self._generate_quantiles()
 
 class RangeOpenClosed(Range):
+    """A half open interval from `low` (open) to `high` (closed)."""
     def test(self, v):
         super().test(v)
         assert v != self.low, "Value must be strictly less than %f" % self.low
@@ -160,13 +162,20 @@ class RangeOpenClosed(Range):
         return [self.high] + self._generate_quantiles()
 
 class RangeOpen(RangeClosedOpen, RangeOpenClosed):
-    """Any integer or float greater than `low` and less than `high`."""
+    """Any number in the open interval from `low` to `high`."""
     def test(self, v):
         super().test(v)
     def generate(self):
         return self._generate_quantiles()
 
 class Set(Type):
+    """Any element which is a member of `els`.
+
+    `els` can be one of several standard Python types, including a
+    list, a tuple, or a set.  Any object with the __contains__
+    function is valid.  This ensures that a value is contained within
+    `els`.
+    """
     def __init__(self, els):
         super().__init__()
         assert hasattr(els, "__contains__") and callable(els.__contains__)
@@ -178,6 +187,7 @@ class Set(Type):
         return [e for e in self.els]
 
 class String(Type):
+    """Any string."""
     def test(self, v):
         super().test(v)
         assert isinstance(v, str), "Non-string passed"
@@ -185,6 +195,7 @@ class String(Type):
         return ["", "a"*1000, "{100}", " ", "abc123", "two words", "\\", "%s", "1", "баклажан"]
 
 class List(Type):
+    """A Python list."""
     def __init__(self, t):
         super().__init__()
         self.type = TypeFactory(t)
@@ -197,6 +208,7 @@ class List(Type):
         return [[], self.type.generate(), [self.type.generate()[0]]*1000]
 
 class Dict(Type):
+    """A Python dictionary."""
     def __init__(self, k, v):
         super().__init__()
         self.valtype = TypeFactory(v)
@@ -212,6 +224,12 @@ class Dict(Type):
         return [{}, dict(zip(self.keytype.generate(), self.valtype.generate()))]
 
 class And(Type):
+    """Conforms to all of the given types.
+
+    Any number of Types can be passed to And.  The And of these types
+    is the logical AND of them, i.e. a value must conform to each of
+    the types.
+    """
     def __init__(self, *types):
         super().__init__()
         self.types = [TypeFactory(a) for a in types]
@@ -232,6 +250,12 @@ class And(Type):
         return valid_generated
 
 class Or(Type):
+    """Conforms to any of the given types.
+
+    Any number of Types can be passed to Or.  The Or of these types is
+    the logical OR of them, i.e. a value must conform to at least one
+    the types.
+    """
     def __init__(self, *types):
         super().__init__()
         self.types = [TypeFactory(a) for a in types]
