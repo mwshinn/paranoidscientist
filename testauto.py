@@ -26,6 +26,13 @@ def add(n, m):
 
 add(4, 5)
 
+@accepts(Number(), Number())
+@requires("n >= m")
+@returns(Number())
+@ensures("return >= 0")
+def subtract(n, m):
+    return n - m
+
 @accepts(Range(-1, 1))
 @returns(Range(0, 1))
 def square(n):

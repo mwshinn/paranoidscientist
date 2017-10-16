@@ -52,6 +52,10 @@ class Type():
         """Generate a list of values of this type."""
         raise NotImplementedError("Please subclass Type")
 
+class Unchecked(Type):
+    """Do not check this type"""
+    pass
+
 class Generic(Type):
     def __init__(self, typ):
         super().__init__()
@@ -384,8 +388,8 @@ def _wrap(func):
                     exec_cache = get_fun_prop(func, "exec_cache")
                 else:
                     exec_cache = []
+                    set_fun_prop(func, "exec_cache", exec_cache)
                 exec_cache.append(limited_locals.copy())
-                set_fun_prop(func, "exec_cache", exec_cache) #TODO is this line necessary?
             # TODO kw arguments
             for ensurement in get_fun_prop(func, "ensures"):
                 e = ensurement.replace("return", "__RETURN__")
@@ -393,7 +397,8 @@ def _wrap(func):
                     e_parts = e.split("<-->")
                     assert len(e_parts) == 2, "Only one implies per statement"
                     e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
-                if "-->" in e: # TODO won't throw error if --> and <--> are in e
+                    assert "-->" not in e, "Only one implies per statement"
+                if "-->" in e:
                     e_parts = e.split("-->")
                     assert len(e_parts) == 2, "Only one implies per statement"
                     e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
@@ -475,6 +480,19 @@ def mutable_argument(func):
     set_fun_prop(func, "mutable_argument", True)
     return _wrap(func)
 
+# TODO this will fail for cyclical objects
+def test_equality(a1, a2):
+    if not hasattr(a1, "__dict__"):
+        return a1 == a2
+    if a1.__dict__ != a2.__dict__:
+        if sorted(a1.__dict__.keys()) != sorted(a2.__dict__.keys()):
+            return False
+        for k in a1.__dict__.keys():
+            if not test_equality(a1.__dict__[k], a2.__dict__[k]):
+                return False
+    return True
+    
+
 def test_function(func):
     """Perform a unit test of a single function.
 
@@ -524,15 +542,10 @@ def test_function(func):
         # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
         # property, we try comparing that.  Otherwise, we compare the
         # value.
-        # TODO this may still fail in some cases.
         if not has_fun_prop(func, "mutable_argument"):
             for a1,a2 in zip(prev_args, tc):
-                if hasattr(a1, "__dict__"):
-                    if a1.__dict__ != a2.__dict__:
-                        raise ObjectModifiedError
-                else:
-                    if a1 != a2:
-                        raise ObjectModifiedError
+                if not test_equality(a1, a2):
+                    raise ObjectModifiedError
 
 # If called as "python3 -m verify script_file_name.py", then unit test
 # script_file_name.py.  By this, we mean call the function
