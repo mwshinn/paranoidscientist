@@ -53,8 +53,11 @@ class Type():
         raise NotImplementedError("Please subclass Type")
 
 class Unchecked(Type):
-    """Do not check this type"""
-    pass
+    """Use type `typ` but do not check it."""
+    def __init__(self, typ):
+        self.typ = TypeFactory(typ)
+    def generate(self):
+        raise self.typ.generate()
 
 class Generic(Type):
     def __init__(self, typ):
@@ -199,6 +202,15 @@ class String(Type):
     def generate(self):
         return ["", "a"*1000, "{100}", " ", "abc123", "two words", "\\", "%s", "1", "баклажан"]
 
+# TODO expand this to define argument/return types
+class Function(Type):
+    """Any function."""
+    def test(self, v):
+        super().test(v)
+        assert callable(v), "Not a function"
+    def generate(self):
+        raise NoGeneratorError
+
 class List(Type):
     """A Python list."""
     def __init__(self, t):
@@ -324,7 +336,7 @@ def set_fun_prop(f, k, v):
     if not hasattr(f, _FUN_PROPS):
         setattr(f, _FUN_PROPS, {})
     if not isinstance(getattr(f, _FUN_PROPS), dict):
-        raise InternalError("Invalid function properties dictionary for %s" % str(f))
+        raise InternalError("Invalid properties dictionary for %s" % str(f))
     getattr(f, _FUN_PROPS)[k] = v
 
 def _wrap(func):
@@ -333,22 +345,23 @@ def _wrap(func):
         if has_fun_prop(func, "argtypes") and has_fun_prop(func, "kwargtypes"):
             argtypes = get_fun_prop(func, "argtypes")
             kwargtypes = get_fun_prop(func, "kwargtypes")
+            # TODO mixed argument types
             if argtypes:
                 if len(argtypes) != len(args):
-                    raise ArgumentTypeError("Invalid argument specification to @accepts")
+                    raise ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
                 for i,t in enumerate(argtypes):
                     try:
                         t.test(args[i])
                     except AssertionError as e:
-                        raise ArgumentTypeError("Invalid argument type %s" % args[i])
+                        raise ArgumentTypeError("Invalid argument type %s in %s" % (args[i], func.__name__))
             if kwargtypes:
-                if all(k in kwargs.keys() for k in kwargtypes.keys()):
-                    raise ArgumentTypeError("Invalid keyword argument specification to @accepts")
+                if not all(k in kwargs.keys() for k in kwargtypes.keys()):
+                    raise ArgumentTypeError("Invalid keyword argument specification to @accepts in %s" % func.__name__)
                 for k,t in kwargtypes.items():
                     try:
                         t.test(kwargs[k])
                     except AssertionError as e:
-                        raise ArgumentTypeError("Invalid argument type for %s: %s" % (k, kwargs[k]))
+                        raise ArgumentTypeError("Invalid argument type in %s for %s: %s" % (func.__name__, k, kwargs[k]))
         # @requires decorator
         if has_fun_prop(func, "requires"):
             argspec = inspect.getargspec(func)
@@ -363,7 +376,7 @@ def _wrap(func):
             # TODO kw arguments
             for requirement in get_fun_prop(func, "requires"):
                 if not eval(requirement, globals(), full_locals):
-                    raise EntryConditionsError("Function requirement '%s' failed" % requirement)
+                    raise EntryConditionsError("Function requirement '%s' failed in %s" % (requirement,  func.__name__))
         # The actual function
         returnvalue = func(*args, **kwargs)
         # @returns decorator
@@ -371,7 +384,7 @@ def _wrap(func):
             try:
                 get_fun_prop(func, "returntype").test(returnvalue)
             except AssertionError as e:
-                raise ReturnTypeError("Invalid return type of %s" % returnvalue )
+                raise ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__name__) )
         # @ensures decorator
         if has_fun_prop(func, "ensures"):
             argspec = inspect.getargspec(func)
@@ -395,12 +408,12 @@ def _wrap(func):
                 e = ensurement.replace("return", "__RETURN__")
                 if "<-->" in e:
                     e_parts = e.split("<-->")
-                    assert len(e_parts) == 2, "Only one implies per statement"
+                    assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
                     e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
-                    assert "-->" not in e, "Only one implies per statement"
+                    assert "-->" not in e, "Only one implies per statement in %s condition %s"  % (ensurement, func.__name__)
                 if "-->" in e:
                     e_parts = e.split("-->")
-                    assert len(e_parts) == 2, "Only one implies per statement"
+                    assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
                     e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
                 if "`" in e:
                     bt = "__BACKTICK__"
@@ -409,9 +422,9 @@ def _wrap(func):
                         limited_locals.update({k+bt : v for k,v in cache_item.items()})
                         e = e.replace("`", bt)
                         if not eval(e, globals(), limited_locals):
-                            raise ExitConditionsError("Ensures statement '%s' failed" % ensurement)
+                            raise ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
                 elif not eval(e, globals(), limited_locals):
-                    raise ExitConditionsError("Ensures statement '%s' failed" % ensurement)
+                    raise ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
         return returnvalue
     if has_fun_prop(func, "active"):
         return func
@@ -514,7 +527,8 @@ def test_function(func):
     # argument types cannot be generated automatically.  If we
     # encounter one of these, unit testing won't work.
     try:
-        testcases = itertools.product(*[e.generate() for e in get_fun_prop(func, "argtypes")])
+        testcases = itertools.product(*[e.generate() for e in
+                                        get_fun_prop(func, "argtypes")])
     except NoGeneratorError:
         testcases = []
     if not testcases:
@@ -573,7 +587,7 @@ if __name__ == "__main__":
     # execution so that we can find the __ALL_FUNCTIONS variable once
     # the script has finished executing.
     globs = {} # Global variables from script execution
-    prefix = "import verify as __verifymod\n__verifymod.__ALL_FUNCTIONS = []\n"
+    prefix = "import verify as __verifymod;__verifymod.__ALL_FUNCTIONS = [];"
     exec(prefix+open(sys.argv[1], "r").read(), globs)
     all_functions = globs["__verifymod"].__ALL_FUNCTIONS
     # Test each function from the script.
