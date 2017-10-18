@@ -51,6 +51,13 @@ class Type():
     def generate(self):
         """Generate a list of values of this type."""
         raise NotImplementedError("Please subclass Type")
+    def __contains__(self, v):
+        try:
+            self.test(v)
+        except AssertionError:
+            return False
+        else:
+            return True
 
 class Unchecked(Type):
     """Use type `typ` but do not check it."""
@@ -278,13 +285,7 @@ class Or(Type):
         self.types = [TypeFactory(a) for a in types]
     def test(self, v):
         passed = False
-        for t in self.types:
-            try:
-                t.test(v)
-                passed = True
-            except AssertionError:
-                continue
-        if not passed:
+        if not any(v in t for t in self.types):
             raise AssertionError("Neither type in Or holds")
     def generate(self):
         return [e for t in self.types for e in t.generate()]
@@ -342,38 +343,24 @@ def set_fun_prop(f, k, v):
 def _wrap(func):
     def _decorated(*args, **kwargs):
         # @accepts decorator
-        if has_fun_prop(func, "argtypes") and has_fun_prop(func, "kwargtypes"):
+        if has_fun_prop(func, "argtypes"):
             argtypes = get_fun_prop(func, "argtypes")
-            kwargtypes = get_fun_prop(func, "kwargtypes")
-            # TODO mixed argument types
-            if argtypes:
-                if len(argtypes) != len(args):
-                    raise ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
-                for i,t in enumerate(argtypes):
-                    try:
-                        t.test(args[i])
-                    except AssertionError as e:
-                        raise ArgumentTypeError("Invalid argument type %s in %s" % (args[i], func.__name__))
-            if kwargtypes:
-                if not all(k in kwargs.keys() for k in kwargtypes.keys()):
-                    raise ArgumentTypeError("Invalid keyword argument specification to @accepts in %s" % func.__name__)
-                for k,t in kwargtypes.items():
-                    try:
-                        t.test(kwargs[k])
-                    except AssertionError as e:
-                        raise ArgumentTypeError("Invalid argument type in %s for %s: %s" % (func.__name__, k, kwargs[k]))
+            argvals = inspect.getcallargs(func, *args, **kwargs)
+            # TODO **kwargs
+            if sorted(argtypes.keys()) != sorted(argvals.keys()):
+                raise ArgumentTypeError("Invalid argument specification in %s" % func.__name__)
+            for k in argtypes.keys():
+                try:
+                    argtypes[k].test(argvals[k])
+                except AssertionError as e:
+                    raise ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__name__))
         # @requires decorator
         if has_fun_prop(func, "requires"):
-            argspec = inspect.getargspec(func)
+            argvals = inspect.getcallargs(func, *args, **kwargs)
             # Function named arguments
             #full_locals = locals().copy()
             #full_locals.update({k : v for k,v in zip(argspec.args, args)})
-            full_locals = {k : v for k,v in zip(argspec.args, args)}
-            # Unnamed positional arguments
-            if argspec.varargs is not None:
-                positional_args = {argspec.varargs: args[len(argspec.args):]}
-                full_locals.update(positional_args)
-            # TODO kw arguments
+            full_locals = argvals
             for requirement in get_fun_prop(func, "requires"):
                 if not eval(requirement, globals(), full_locals):
                     raise EntryConditionsError("Function requirement '%s' failed in %s" % (requirement,  func.__name__))
@@ -387,15 +374,12 @@ def _wrap(func):
                 raise ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__name__) )
         # @ensures decorator
         if has_fun_prop(func, "ensures"):
-            argspec = inspect.getargspec(func)
+            argtypes = get_fun_prop(func, "argtypes")
+            argvals = inspect.getcallargs(func, *args, **kwargs)
             # Function named arguments
-            limited_locals = {k : v for k,v in zip(argspec.args, args)}
+            limited_locals = argvals
             # Return value
             limited_locals['__RETURN__'] = returnvalue
-            # Unnamed positional arguments
-            if argspec.varargs is not None:
-                positional_args = {argspec.varargs: args[len(argspec.args):]}
-                limited_locals.update(positional_args)
             if any("`" in ens for ens in get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
                 if has_fun_prop(func, "exec_cache"):
                     exec_cache = get_fun_prop(func, "exec_cache")
@@ -403,7 +387,6 @@ def _wrap(func):
                     exec_cache = []
                     set_fun_prop(func, "exec_cache", exec_cache)
                 exec_cache.append(limited_locals.copy())
-            # TODO kw arguments
             for ensurement in get_fun_prop(func, "ensures"):
                 e = ensurement.replace("return", "__RETURN__")
                 if "<-->" in e:
@@ -438,18 +421,18 @@ def _wrap(func):
     
 
 def accepts(*argtypes, **kwargtypes):
-    argtypes = [TypeFactory(a) for a in argtypes]
-    kwargtypes = {k : TypeFactory(a) for k,a in kwargtypes.items()}
+    theseargtypes = [TypeFactory(a) for a in argtypes]
+    thesekwargtypes = {k : TypeFactory(a) for k,a in kwargtypes.items()}
     def _decorator(func):
         # @accepts decorator
-        if argtypes is not None:
-            if has_fun_prop(func, "argtypes"):
-                raise ValueError("Cannot set argument types twice")
-            set_fun_prop(func, "argtypes", argtypes)
-        if kwargtypes is not None:
-            if has_fun_prop(func, "kwargtypes"):
-                raise ValueError("Cannot set set keyword argument types twice")
-            set_fun_prop(func, "kwargtypes", kwargtypes)
+        f = func.__wrapped__ if hasattr(func, "__wrapped__") else func
+        try:
+            argtypes = inspect.getcallargs(f, *theseargtypes, **thesekwargtypes)
+        except TypeError:
+            raise ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
+        if has_fun_prop(func, "argtypes"):
+            raise ValueError("Cannot set argument types twice")
+        set_fun_prop(func, "argtypes", argtypes)
         return _wrap(func)
     return _decorator
 
@@ -527,8 +510,8 @@ def test_function(func):
     # argument types cannot be generated automatically.  If we
     # encounter one of these, unit testing won't work.
     try:
-        testcases = itertools.product(*[e.generate() for e in
-                                        get_fun_prop(func, "argtypes")])
+        args = get_fun_prop(func, "argtypes")
+        testcases = itertools.product(*[args[k].generate() for k in sorted(args.keys())])
     except NoGeneratorError:
         testcases = []
     if not testcases:
@@ -546,7 +529,7 @@ def test_function(func):
         # Try evalueating the function for the given testcase in the
         # loop.
         try:
-            func(*tc)
+            func(**{k : v for k,v in zip(sorted(args.keys()),tc)})
         except EntryConditionsError:
             continue
         # Function argument comparison: To finish comparing arguments,

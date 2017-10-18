@@ -11,7 +11,7 @@ def fails(f):
 
 # Tests
 @accepts(Number())
-@returns(Number())
+#@returns(Number())
 def add_three(n):
     return n+3
 
