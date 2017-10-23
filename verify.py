@@ -59,12 +59,25 @@ class Type():
         else:
             return True
 
+class Constant(Type):
+    """Only one valid value, which is passed at initialization"""
+    def __init__(self, const):
+        super().__init__()
+        assert const is not None, "None cannot be a constant"
+        self.const = const
+    def test(self, v):
+        super().test(v)
+        assert self.const == v
+    def generate(self):
+        yield self.const
+
 class Unchecked(Type):
     """Use type `typ` but do not check it."""
     def __init__(self, typ):
         self.typ = TypeFactory(typ)
     def generate(self):
-        raise self.typ.generate()
+        for gv in self.typ.generate():
+            yield gv
 
 class Generic(Type):
     def __init__(self, typ):
@@ -77,7 +90,8 @@ class Generic(Type):
             return self.type._test(v)
     def generate(self):
         if hasattr(self.type, "_generate") and callable(self.type._generate):
-            return self.type._generate()
+            for v in self.type._generate():
+                yield v
         else:
             raise NoGeneratorError("Please define a _generate() function in "
                                    "class %s." % self.type.__name__)
@@ -87,7 +101,7 @@ class Nothing(Type):
     def test(self, v):
         assert v is None
     def generate(self):
-        return [None]
+        yield None
 
 class Numeric(Type):
     """Any integer or float, including inf, -inf, and nan."""
@@ -96,7 +110,15 @@ class Numeric(Type):
         assert isinstance(v, (int, float)), "Invalid numeric"
     def generate(self):
         # Check infinity, nan, 0, +/- numbers, a float, a small/big number
-        return [math.inf, -math.inf, math.nan, 0, 1, -1, 3.141, 1e-10, 1e10]
+        yield math.inf # Check infs
+        yield -math.inf
+        yield math.nan # nan
+        yield 0
+        yield 1
+        yield -1
+        yield 3.141 # A float
+        yield 1e-10 # A small number
+        yield 1e10 # A big number
 
 class Number(Numeric):
     """Any integer or float, excluding inf, -inf, and nan."""
@@ -106,7 +128,12 @@ class Number(Numeric):
         assert not math.isnan(v), "Number cannot be nan"
         assert not math.isinf(v), "Number must be finite"
     def generate(self):
-        return [0, 1, -1, 3.141, 1e-10, 1e10]
+        yield 0
+        yield 1
+        yield -1
+        yield 3.141 # A float
+        yield 1e-10 # A small number
+        yield 1e10 # A large number
 
 class Integer(Number):
     """Any integer."""
@@ -114,7 +141,11 @@ class Integer(Number):
         super().test(v)
         assert v // 1 == v, "Invalid integer"
     def generate(self):
-        return [-100, -1, 0, 1, 100]
+        yield -100
+        yield -1
+        yield 0
+        yield 1
+        yield 100
 
 class Natural0(Integer):
     """Any natural number including 0."""
@@ -122,7 +153,10 @@ class Natural0(Integer):
         super().test(v)
         assert v >= 0, "Must be greater than or equal to 0"
     def generate(self):
-        return [0, 1, 10, 100]
+        yield 0
+        yield 1
+        yield 10
+        yield 100
 
 class Natural1(Natural0):
     """Any natural number excluding 0."""
@@ -130,7 +164,10 @@ class Natural1(Natural0):
         super().test(v)
         assert v > 0, "Must be greater than 0"
     def generate(self):
-        return [1, 2, 10, 100]
+        yield 1
+        yield 2
+        yield 10
+        yield 100
 
 class Range(Number):
     """Any integer or float from `low` to `high`, inclusive."""
@@ -140,25 +177,28 @@ class Range(Number):
             isinstance(high, (float, int)), "Invalid bounds"
         assert low < high, \
             "Low %s must be strictly greater than high %s" % (low, high)
+        assert not (math.isinf(low) and math.isinf(high)), \
+            "Both bounds can't be inf"
         self.low = low if low is not None else -math.inf
         self.high = high if low is not None else math.inf
     def test(self, v):
         super().test(v)
         assert self.low <= v <= self.high, "Value %f must be greater" \
             "than %f and less than %f" % (v, self.low, self.high)
-    def _generate_quantiles(self):
+    def generate(self):
         EPSILON = 1e-5
+        if not math.isinf(self.low):
+            yield self.low
+            yield self.low + EPSILON
+        if not math.isinf(self.high):
+            yield self.high
+            yield self.high - EPSILON
         if not (math.isinf(self.low) or math.isinf(self.high)):
             l = self.low
             h = self.high
-            return [(l+h)*EPSILON, (l+h)*.5, (l+h)*.25, (l+h)*.75, (l+h)*(1-EPSILON)]
-        elif math.isinf(self.low):
-            return [self.high-EPSILON]
-        elif math.isinf(self.high):
-            return [self.low-EPSILON]
-        raise AssertionError("Invalid Range bounds")
-    def generate(self):
-        return [self.low, self.high] + self._generate_quantiles()
+            yield l + (h-l)*.25
+            yield l + (h-l)*.5
+            yield l + (h-l)*.75
 
 class RangeClosedOpen(Range):
     """A half open interval from `low` (closed) to `high` (open)."""
@@ -166,7 +206,9 @@ class RangeClosedOpen(Range):
         super().test(v)
         assert v != self.high, "Value must be strictly greater than %f" % self.high
     def generate(self):
-        return [self.low] + self._generate_quantiles()
+        for v in super().generate():
+            if v != self.high:
+                yield v
 
 class RangeOpenClosed(Range):
     """A half open interval from `low` (open) to `high` (closed)."""
@@ -174,14 +216,26 @@ class RangeOpenClosed(Range):
         super().test(v)
         assert v != self.low, "Value must be strictly less than %f" % self.low
     def generate(self):
-        return [self.high] + self._generate_quantiles()
+        for v in super().generate():
+            if v != self.low:
+                yield v
 
 class RangeOpen(RangeClosedOpen, RangeOpenClosed):
     """Any number in the open interval from `low` to `high`."""
     def test(self, v):
         super().test(v)
     def generate(self):
-        return self._generate_quantiles()
+        for v in Range.generate(self):
+            if not v in [self.low, self.high]:
+                yield v
+
+class Positive0(RangeClosedOpen):
+    def __init__(self):
+        return super().__init__(low=0, high=math.inf)
+
+class Positive(RangeOpen):
+    def __init__(self):
+        return super().__init__(low=0, high=math.inf)
 
 class Set(Type):
     """Any element which is a member of `els`.
@@ -199,7 +253,8 @@ class Set(Type):
         super().test(v)
         assert v in self.els, "Value %s in set" % v
     def generate(self):
-        return [e for e in self.els]
+        for e in self.els:
+            yield e
 
 class String(Type):
     """Any string."""
@@ -207,7 +262,16 @@ class String(Type):
         super().test(v)
         assert isinstance(v, str), "Non-string passed"
     def generate(self):
-        return ["", "a"*1000, "{100}", " ", "abc123", "two words", "\\", "%s", "1", "баклажан"]
+        yield "" # Empty string
+        yield "a" # A short string
+        yield "a"*1000 # A long string
+        yield " " # A whitespace string
+        yield "abc123" # An alphanumeric string
+        yield "Two words sentence." # A sentence-like string
+        yield "\\" # An escape sequence string
+        yield "%s" # An substitution pattern string
+        yield "2" # A string which can be interpreted as a number
+        yield "баклажан" # A UTF-8 string
 
 # TODO expand this to define argument/return types
 class Function(Type):
@@ -229,7 +293,9 @@ class List(Type):
         for e in v:
             self.type.test(e)
     def generate(self):
-        return [[], self.type.generate(), [self.type.generate()[0]]*1000]
+        yield [] # Empty list
+        yield [gv for gv in self.type.generate()] # A list of those types
+        yield [next(self.type.generate())]*1000 # A long list
 
 class Dict(Type):
     """A Python dictionary."""
@@ -245,7 +311,8 @@ class Dict(Type):
         for e in v.values():
             self.valtype.test(e)
     def generate(self):
-        return [{}, dict(zip(self.keytype.generate(), self.valtype.generate()))]
+        yield {}
+        yield dict(zip(self.keytype.generate(), self.valtype.generate()))
 
 class And(Type):
     """Conforms to all of the given types.
@@ -270,8 +337,7 @@ class And(Type):
             except AssertionError:
                 continue
             else:
-                valid_generated.append(g)
-        return valid_generated
+                yield g
 
 class Or(Type):
     """Conforms to any of the given types.
@@ -288,7 +354,9 @@ class Or(Type):
         if not any(v in t for t in self.types):
             raise AssertionError("Neither type in Or holds")
     def generate(self):
-        return [e for t in self.types for e in t.generate()]
+        ng = (e for t in self.types for e in t.generate())
+        for g in ng:
+            yield g
 
 def has_fun_prop(f, k):
     """Test whether function `f` has property `k`.
@@ -428,6 +496,8 @@ def accepts(*argtypes, **kwargtypes):
         f = func.__wrapped__ if hasattr(func, "__wrapped__") else func
         try:
             argtypes = inspect.getcallargs(f, *theseargtypes, **thesekwargtypes)
+            argtypes = {k: v if issubclass(type(v), Type) else Constant(v)
+                        for k,v in argtypes.items()}
         except TypeError:
             raise ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
         if has_fun_prop(func, "argtypes"):
@@ -502,6 +572,8 @@ def test_function(func):
     Assuming runtime checking is enabled (as it should be), running
     this on a function only tests it for inputs it is likely to
     encounter in the future.
+
+    Returns the number of tests performed.
     """
     # Ensure the user has specified argument types using the @accepts
     # decorator.
@@ -511,7 +583,7 @@ def test_function(func):
     # encounter one of these, unit testing won't work.
     try:
         args = get_fun_prop(func, "argtypes")
-        testcases = itertools.product(*[args[k].generate() for k in sorted(args.keys())])
+        testcases = itertools.product(*[list(args[k].generate()) for k in sorted(args.keys())])
     except NoGeneratorError:
         testcases = []
     if not testcases:
@@ -520,6 +592,7 @@ def test_function(func):
     # If entry conditions are met, simply running the function will be
     # enough of a test, since all values are checked at runtime.  So
     # execute the function once for each combination of arguments.
+    totaltests = 0
     for tc in testcases:
         # Function argument comparison: Allow testing for function
         # arguments which were modified.  To do so, first save an
@@ -530,6 +603,7 @@ def test_function(func):
         # loop.
         try:
             func(**{k : v for k,v in zip(sorted(args.keys()),tc)})
+            totaltests += 1
         except EntryConditionsError:
             continue
         # Function argument comparison: To finish comparing arguments,
@@ -543,6 +617,7 @@ def test_function(func):
             for a1,a2 in zip(prev_args, tc):
                 if not test_equality(a1, a2):
                     raise ObjectModifiedError
+    return totaltests
 
 # If called as "python3 -m verify script_file_name.py", then unit test
 # script_file_name.py.  By this, we mean call the function
@@ -582,10 +657,10 @@ if __name__ == "__main__":
         # make-shift progress bar.
         start_text = "    Testing %s..." % f.__name__
         print(start_text, end="", flush=True)
-        test_function(f)
+        ntests = test_function(f)
         # Extra spaces after "Tested %s" compensate for the fact that
         # the string to signal the start of testing function f is
         # longer than the string to signal function f has been tested,
         # so this avoids leaving extra characters on the terminal.
-        print("\b"*len(start_text)+"    Tested %s    " % f.__name__, flush=True)
+        print("\b"*len(start_text)+"    Tested %i values for %s    " % (ntests, f.__name__), flush=True)
     print("Tested %i functions in %s." % (len(all_functions), sys.argv[1]))
