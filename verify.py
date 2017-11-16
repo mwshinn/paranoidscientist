@@ -65,6 +65,8 @@ class Constant(Type):
         super().__init__()
         assert const is not None, "None cannot be a constant"
         self.const = const
+    def __repr__(self):
+        return "Constant(%s)" % self.const
     def test(self, v):
         super().test(v)
         assert self.const == v
@@ -88,6 +90,8 @@ class Generic(Type):
         assert isinstance(v, self.type)
         if hasattr(self.type, "_test") and callable(self.type._test):
             return self.type._test(v)
+    def __repr__(self):
+        return "Generic(%s)" % self.type
     def generate(self):
         if hasattr(self.type, "_generate") and callable(self.type._generate):
             for v in self.type._generate():
@@ -95,6 +99,13 @@ class Generic(Type):
         else:
             raise NoGeneratorError("Please define a _generate() function in "
                                    "class %s." % self.type.__name__)
+
+class Self(Type):
+    """Used only as a placeholder for methods with a 'self' argument."""
+    def test(self, v):
+        raise VerifyError("Invalid use of the Self type")
+    def generate(self):
+        raise VerifyError("Invalid use of the Self type")
 
 class Nothing(Type):
     """The None type."""
@@ -314,6 +325,38 @@ class Dict(Type):
         yield {}
         yield dict(zip(self.keytype.generate(), self.valtype.generate()))
 
+class ParametersDict(Type):
+    """A Python dictionary with limited keys.
+
+    Represents a set of parameters.  `params`, the single argument,
+    should be a dictionary, where the keys are strings representing
+    the parameter names the values are Types.  The only keys allowed
+    in a ParametersDict are the keys in `params`.  The values for each
+    key must be of the type specified.  Note that not all of the keys
+    in `params` must be specified for this type to be valid.
+    """
+    def __init__(self, params):
+        super().__init__()
+        # Future note: if this is modified to work with non-strings
+        # for keys, then adjust the test() function accordingly, in
+        # particular, the line checking that there are no extra keys
+        # for objects with equality implemented by memory location
+        # instead of value.
+        assert all((isinstance(k, str) for k in params.keys()))
+        self.params = {k: TypeFactory(v) for k,v in params.items()}
+    def test(self, v):
+        super().test(v)
+        assert isinstance(v, dict), "Non-dict passed"
+        assert not set(v.keys()) - set(self.params.keys()), \
+            "Invalid reward keys"
+        for k in v.keys():
+            self.params[v].test(v[k])
+    def generate(self):
+        yield {}
+        # TODO more appropriate tests here
+        for k in self.params.keys():
+            yield {k : next(self.params[k].generate())}
+
 class And(Type):
     """Conforms to all of the given types.
 
@@ -414,7 +457,6 @@ def _wrap(func):
         if has_fun_prop(func, "argtypes"):
             argtypes = get_fun_prop(func, "argtypes")
             argvals = inspect.getcallargs(func, *args, **kwargs)
-            # TODO **kwargs
             if sorted(argtypes.keys()) != sorted(argvals.keys()):
                 raise ArgumentTypeError("Invalid argument specification in %s" % func.__name__)
             for k in argtypes.keys():
@@ -581,14 +623,15 @@ def test_function(func):
     # Generate all combinations of arguments as test cases.  Some
     # argument types cannot be generated automatically.  If we
     # encounter one of these, unit testing won't work.
+    args = get_fun_prop(func, "argtypes")
+
     try:
-        args = get_fun_prop(func, "argtypes")
         testcases = itertools.product(*[list(args[k].generate()) for k in sorted(args.keys())])
     except NoGeneratorError:
         testcases = []
     if not testcases:
         print("Warning: %s could not be tested" % func.__name__)
-        return
+        return 0
     # If entry conditions are met, simply running the function will be
     # enough of a test, since all values are checked at runtime.  So
     # execute the function once for each combination of arguments.
@@ -599,10 +642,16 @@ def test_function(func):
         # extra copy of the testcase.
         if not has_fun_prop(func, "mutable_argument"):
             prev_args = deepcopy(tc)
-        # Try evalueating the function for the given testcase in the
-        # loop.
+        # TODO Clean this up a bit
+        sigparams = inspect.signature(func).parameters
+        sig_kwargs = None
+        for p in sigparams:
+            if sigparams[p].kind == inspect.Parameter.VAR_KEYWORD:
+                sig_kwargs = sigparams[p].name
         try:
-            func(**{k : v for k,v in zip(sorted(args.keys()),tc)})
+            kws = tc[sorted(args.keys()).index(sig_kwargs)] if sig_kwargs else {}
+            func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != sig_kwargs},
+                 **kws)
             totaltests += 1
         except EntryConditionsError:
             continue
@@ -618,6 +667,7 @@ def test_function(func):
                 if not test_equality(a1, a2):
                     raise ObjectModifiedError
     return totaltests
+
 
 # If called as "python3 -m verify script_file_name.py", then unit test
 # script_file_name.py.  By this, we mean call the function
@@ -664,3 +714,15 @@ if __name__ == "__main__":
         # so this avoids leaving extra characters on the terminal.
         print("\b"*len(start_text)+"    Tested %i values for %s    " % (ntests, f.__name__), flush=True)
     print("Tested %i functions in %s." % (len(all_functions), sys.argv[1]))
+
+
+
+def verifiedclass(cls):
+    for methname in dir(cls):
+        meth = getattr(cls, methname)
+        if has_fun_prop(meth, "argtypes"):
+            argtypes = get_fun_prop(meth, "argtypes")
+            if "self" in argtypes and isinstance(argtypes["self"], Self):
+                argtypes["self"] = Generic(cls)
+                set_fun_prop(meth, "argtypes", argtypes) # TODO Not necessary because of reference
+    return cls

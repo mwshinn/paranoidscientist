@@ -147,3 +147,22 @@ add(7, 3)
 
 test_function(add)
 
+@verifiedclass
+class MyClass:
+    def __init__(self, val, **kwargs):
+        self.val = val
+        self.extraargs = kwargs
+    @staticmethod
+    def _test(v):
+        Number().test(v.val)
+        Dict(String(), String()).test(v.extraargs)
+    @staticmethod
+    def _generate():
+        vals = [3, 11, -3.1]
+        return [MyClass(v, extraarg='ata') for v in vals]
+    @accepts(Self, Number)
+    def testfun(self, x):
+        return self.val + x
+    @accepts(Self, Number)
+    def testfun2(self, x, **kwargs):
+        return self.val + x
