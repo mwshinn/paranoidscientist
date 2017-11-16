@@ -103,9 +103,9 @@ class Generic(Type):
 class Self(Type):
     """Used only as a placeholder for methods with a 'self' argument."""
     def test(self, v):
-        raise VerifyError("Invalid use of the Self type")
+        raise VerifyError("Invalid use of the Self type. (Did you forget to use @verifiedclass?)")
     def generate(self):
-        raise VerifyError("Invalid use of the Self type")
+        raise VerifyError("Invalid use of the Self type. (Did you forget to use @verifiedclass?)")
 
 class Nothing(Type):
     """The None type."""
@@ -350,7 +350,7 @@ class ParametersDict(Type):
         assert not set(v.keys()) - set(self.params.keys()), \
             "Invalid reward keys"
         for k in v.keys():
-            self.params[v].test(v[k])
+            self.params[k].test(v[k])
     def generate(self):
         yield {}
         # TODO more appropriate tests here
@@ -584,6 +584,7 @@ def ensures(condition):
         return _wrap(func)
     return _decorator
 
+# TODO make mutable argument not default
 def mutable_argument(func):
     set_fun_prop(func, "mutable_argument", True)
     return _wrap(func)
