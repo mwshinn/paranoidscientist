@@ -8,6 +8,9 @@ import functools
 from exceptions import *
 from copy import deepcopy
 
+#from random import Random
+#_RNG = Random()
+
 _FUN_PROPS = "__verify__"
 
 def TypeFactory(v):
@@ -25,6 +28,12 @@ def TypeFactory(v):
         return v
     elif issubclass(v, Type):
         return v()
+    elif v is int:
+        return Integer()
+    elif v is float:
+        return Number()
+    elif v is str:
+        return String()
     elif issubclass(type(v), type):
         return Generic(v)
     elif v is None:
@@ -515,8 +524,10 @@ def _wrap(func):
                         limited_locals.update({k+bt : v for k,v in cache_item.items()})
                         e = e.replace("`", bt)
                         if not eval(e, globals(), limited_locals):
+                            print("DEBUG INFORMATION:", limited_locals)
                             raise ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
                 elif not eval(e, globals(), limited_locals):
+                    print("DEBUG INFORMATION:", limited_locals)
                     raise ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
         return returnvalue
     if has_fun_prop(func, "active"):
