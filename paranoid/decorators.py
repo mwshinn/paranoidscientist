@@ -6,6 +6,8 @@ from . import utils as U
 from .types import base as T
 from . import exceptions as E
 
+RECURSIVE_LIMIT_WHILE_EXEC = 100 # TODO temporary hack to improve performance, will change later.
+
 def _wrap(func):
     def _decorated(*args, **kwargs):
         # @accepts decorator
@@ -65,36 +67,28 @@ def _wrap(func):
             limited_locals = argvals
             # Return value
             limited_locals['__RETURN__'] = returnvalue
-            if any("`" in ens for ens in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
+            if any(hasbt for hasbt,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
                 if U.has_fun_prop(func, "exec_cache"):
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                 else:
                     exec_cache = []
                     U.set_fun_prop(func, "exec_cache", exec_cache)
                 exec_cache.append(limited_locals.copy())
-            for ensurement in U.get_fun_prop(func, "ensures"):
-                e = ensurement.replace("return", "__RETURN__")
-                if "<-->" in e:
-                    e_parts = e.split("<-->")
-                    assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
-                    e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
-                    assert "-->" not in e, "Only one implies per statement in %s condition %s"  % (ensurement, func.__name__)
-                if "-->" in e:
-                    e_parts = e.split("-->")
-                    assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
-                    e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
-                if "`" in e:
+                if len(exec_cache) > RECURSIVE_LIMIT_WHILE_EXEC:
+                    exec_cache.pop(0) # TODO Hack for now, change this mechanism
+            for hasbt, ensurement in U.get_fun_prop(func, "ensures"):
+                if hasbt:
                     bt = "__BACKTICK__"
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                     for cache_item in exec_cache:
                         limited_locals.update({k+bt : v for k,v in cache_item.items()})
-                        e = e.replace("`", bt)
-                        if not eval(e, globals(), limited_locals):
+                        if not eval(ensurement, globals(), limited_locals):
                             print("DEBUG INFORMATION:", limited_locals)
                             raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
-                elif not eval(e, globals(), limited_locals):
-                    print("DEBUG INFORMATION:", limited_locals)
-                    raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
+                else:
+                    if not eval(ensurement, globals(), limited_locals):
+                        print("DEBUG INFORMATION:", limited_locals)
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func
@@ -143,7 +137,7 @@ def requires(condition):
             base_requires = U.get_fun_prop(func, "requires")
         else:
             base_requires = []
-        U.set_fun_prop(func, "requires", [condition]+base_requires)
+        U.set_fun_prop(func, "requires", [compile(condition, '', 'eval')]+base_requires)
         return _wrap(func)
     return _decorator
 
@@ -153,10 +147,25 @@ def ensures(condition):
         if U.has_fun_prop(func, "ensures"):
             if not isinstance(U.get_fun_prop(func, "ensures"), list):
                 raise E.InternalError("Invalid ensures strucutre")
-            base_ensures = U.get_fun_prop(func, "ensures")
+            ensures_statements = U.get_fun_prop(func, "ensures")
         else:
-            base_ensures = []
-        U.set_fun_prop(func, "ensures", [condition]+base_ensures)
+            ensures_statements = []
+        e = condition.replace("return", "__RETURN__")
+        if "<-->" in e:
+            e_parts = e.split("<-->")
+            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
+            e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
+            assert "-->" not in e, "Only one implies per statement in %s condition %s"  % (ensurement, func.__name__)
+        if "-->" in e:
+            e_parts = e.split("-->")
+            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
+            e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
+        if "`" in e:
+            bt = "__BACKTICK__"
+            e = e.replace("`", bt)
+            U.set_fun_prop(func, "ensures", [(True, compile(e, '', 'eval'))]+ensures_statements)
+        else:
+            U.set_fun_prop(func, "ensures", [(False, compile(e, '', 'eval'))]+ensures_statements)
         return _wrap(func)
     return _decorator
 
