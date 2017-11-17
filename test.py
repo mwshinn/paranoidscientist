@@ -77,6 +77,13 @@ fails(lambda : ident({"a" : 33, "b" : 901.90, 22 : 22}))
 class MyType:
     def __init__(self, val):
         self.val = val
+    @staticmethod
+    def _generate():
+        yield MyType(1)
+        yield MyType("string")
+    @staticmethod
+    def _test(v):
+        Integer().test(v.val)
 
 @accepts(MyType)
 @returns(MyType)
@@ -85,6 +92,7 @@ def myfun(mt):
 
 myfun(MyType(1))
 fails(lambda : myfun("abc"))
+fails(lambda : myfun(MyType("abc")))
 
 @accepts(And(Natural0(), Range(low=4, high=7)))
 @returns(Natural1())
@@ -138,3 +146,24 @@ add(7, 3)
 
 test_function(add)
 
+
+@accepts(MyType)
+@returns(Nothing)
+@ensures("1==1")
+@immutable_argument
+def dontmod_mytype(mt):
+    dummy = 3
+
+dontmod_mytype(MyType(10))
+
+@accepts(MyType)
+@returns(Nothing)
+@ensures("1==1")
+@immutable_argument
+def mod_mytype(mt):
+    mt.val = 3
+
+
+
+mod_mytype(MyType(3))
+fails(lambda : mod_mytype(MyType(1)))

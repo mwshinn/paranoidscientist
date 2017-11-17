@@ -96,12 +96,6 @@ def myfun(mt):
 myfun(MyType(1))
 fails(lambda : myfun("abc"))
 
-@accepts(MyType)
-@returns(Nothing)
-@mutable_argument
-def mod_mytype(mt):
-    mt.val = 3
-
 @accepts(And(Natural0(), Or(Range(low=4, high=7), Range(low=12, high=15))))
 @returns(Natural1())
 def addthree(a):
@@ -166,3 +160,4 @@ class MyClass:
     @accepts(Self, Number)
     def testfun2(self, x, **kwargs):
         return self.val + x
+

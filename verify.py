@@ -483,6 +483,12 @@ def _wrap(func):
             for requirement in get_fun_prop(func, "requires"):
                 if not eval(requirement, globals(), full_locals):
                     raise EntryConditionsError("Function requirement '%s' failed in %s" % (requirement,  func.__name__))
+        # Function argument comparison: Allow testing for function
+        # arguments which were modified.  To do so, first save an
+        # extra copy of the testcase.
+        if has_fun_prop(func, "immutable_argument"):
+            prev_args = deepcopy(args)
+            prev_kwargs = deepcopy(kwargs)
         # The actual function
         returnvalue = func(*args, **kwargs)
         # @returns decorator
@@ -491,6 +497,20 @@ def _wrap(func):
                 get_fun_prop(func, "returntype").test(returnvalue)
             except AssertionError as e:
                 raise ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__name__) )
+        # Function argument comparison: To finish comparing arguments,
+        # test the arguments for equality.  We cannot check for simple
+        # equality because many objects have identity equality
+        # built-in, so testing from a deepcopy is guaranteed to fail,
+        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
+        # property, we try comparing that.  Otherwise, we compare the
+        # value.
+        if has_fun_prop(func, "immutable_argument"):
+            for a1,a2 in zip(prev_args,args):
+                if not test_equality(a1, a2):
+                    raise ObjectModifiedError
+            for k in kwargs.keys():
+                if not test_equality(prev_kwargs[k], kwargs[k]):
+                    raise ObjectModifiedError
         # @ensures decorator
         if has_fun_prop(func, "ensures"):
             argtypes = get_fun_prop(func, "argtypes")
@@ -595,9 +615,8 @@ def ensures(condition):
         return _wrap(func)
     return _decorator
 
-# TODO make mutable argument not default
-def mutable_argument(func):
-    set_fun_prop(func, "mutable_argument", True)
+def immutable_argument(func):
+    set_fun_prop(func, "immutable_argument", True)
     return _wrap(func)
 
 # TODO this will fail for cyclical objects
@@ -649,11 +668,6 @@ def test_function(func):
     # execute the function once for each combination of arguments.
     totaltests = 0
     for tc in testcases:
-        # Function argument comparison: Allow testing for function
-        # arguments which were modified.  To do so, first save an
-        # extra copy of the testcase.
-        if not has_fun_prop(func, "mutable_argument"):
-            prev_args = deepcopy(tc)
         # TODO Clean this up a bit
         sigparams = inspect.signature(func).parameters
         sig_kwargs = None
@@ -667,17 +681,6 @@ def test_function(func):
             totaltests += 1
         except EntryConditionsError:
             continue
-        # Function argument comparison: To finish comparing arguments,
-        # test the arguments for equality.  We cannot check for simple
-        # equality because many objects have identity equality
-        # built-in, so testing from a deepcopy is guaranteed to fail,
-        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
-        # property, we try comparing that.  Otherwise, we compare the
-        # value.
-        if not has_fun_prop(func, "mutable_argument"):
-            for a1,a2 in zip(prev_args, tc):
-                if not test_equality(a1, a2):
-                    raise ObjectModifiedError
     return totaltests
 
 
