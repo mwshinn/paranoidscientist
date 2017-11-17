@@ -24,7 +24,7 @@ class Identifier(String):
     is_ident = re.compile(r'^[A-Za-z0-9_-]+$')
     def test(self, v):
         super().test(v)
-        assert self.is_ident.match(v), "Invalid latin characters"
+        assert self.is_ident.match(v), "Invalid identifier characters"
     def generate(self):
         yield "" # Empty string
         yield "_" # Empty string
@@ -45,7 +45,7 @@ class Alphanumeric(Identifier):
     is_alphanum = re.compile(r'^[A-Za-z0-9]+$')
     def test(self, v):
         super().test(v)
-        assert self.is_alphanum.match(v), "Invalid latin characters"
+        assert self.is_alphanum.match(v), "Invalid alphanumeric characters"
     def generate(self):
         yield "" # Empty string
         yield "a" # A short string
