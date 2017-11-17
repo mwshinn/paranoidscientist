@@ -1,4 +1,5 @@
-from verify import *
+from paranoid import *
+from paranoid.testfunctions import test_function
 
 def fails(f):
     failed = False
@@ -11,7 +12,7 @@ def fails(f):
 
 # Tests
 @accepts(Number())
-@returns(Number())
+#@returns(Number())
 def add_three(n):
     return n+3
 
@@ -26,13 +27,19 @@ def add(n, m):
 
 add(4, 5)
 
+@accepts(Number(), Number())
+@requires("n >= m")
+@returns(Number())
+@ensures("return >= 0")
+def subtract(n, m):
+    return n - m
+
 @accepts(Range(-1, 1))
-@returns(Range(0, .9))
+@returns(Range(0, 1))
 def square(n):
     return n*n
 
 square(.3)
-fails(lambda : square(.999))
 
 @accepts(RangeClosedOpen(-1, 1))
 @returns(Range(0, 1))
@@ -51,7 +58,7 @@ square(1)
 fails(lambda : square(-1))
 
 @accepts(RangeOpen(-1, 1))
-@returns(RangeOpen(0, 1))
+@returns(RangeClosedOpen(0, 1))
 def square(n):
     return n*n
 
@@ -79,11 +86,8 @@ class MyType:
         self.val = val
     @staticmethod
     def _generate():
-        yield MyType(1)
-        yield MyType("string")
-    @staticmethod
-    def _test(v):
-        Integer().test(v.val)
+        vals = ["string", 3, 11]
+        return [MyType(v) for v in vals]
 
 @accepts(MyType)
 @returns(MyType)
@@ -92,9 +96,8 @@ def myfun(mt):
 
 myfun(MyType(1))
 fails(lambda : myfun("abc"))
-fails(lambda : myfun(MyType("abc")))
 
-@accepts(And(Natural0(), Range(low=4, high=7)))
+@accepts(And(Natural0(), Or(Range(low=4, high=7), Range(low=12, high=15))))
 @returns(Natural1())
 def addthree(a):
     return a+3
@@ -110,13 +113,6 @@ def pass_it(s):
     pass
 
 pass_it("ars")
-
-@accepts(String)
-@returns(Nothing)
-def dont_pass_it(s):
-    return False
-
-fails(lambda : dont_pass_it("ars"))
 
 @accepts(Number())
 @returns(Number())
@@ -146,24 +142,24 @@ add(7, 3)
 
 test_function(add)
 
+@verifiedclass
+class MyClass:
+    def __init__(self, val, **kwargs):
+        self.val = val
+        self.extraargs = kwargs
+    @staticmethod
+    def _test(v):
+        Number().test(v.val)
+        Dict(String(), String()).test(v.extraargs)
+    @staticmethod
+    def _generate():
+        vals = [3, 11, -3.1]
+        return [MyClass(v, extraarg='ata') for v in vals]
+    @accepts(Self, Number)
+    def testfun(self, x):
+        return self.val + x
+    @accepts(Self, Number)
+    @returns(Number)
+    def testfun2(self, x, **kwargs):
+        return self.val + x
 
-@accepts(MyType)
-@returns(Nothing)
-@ensures("1==1")
-@immutable_argument
-def dontmod_mytype(mt):
-    dummy = 3
-
-dontmod_mytype(MyType(10))
-
-@accepts(MyType)
-@returns(Nothing)
-@ensures("1==1")
-@immutable_argument
-def mod_mytype(mt):
-    mt.val = 3
-
-
-
-mod_mytype(MyType(3))
-fails(lambda : mod_mytype(MyType(1)))
