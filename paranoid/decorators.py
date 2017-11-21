@@ -67,7 +67,7 @@ def _wrap(func):
             limited_locals = argvals
             # Return value
             limited_locals['__RETURN__'] = returnvalue
-            if any(hasbt for hasbt,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
+            if any(hasbt for hasbt,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
                 if U.has_fun_prop(func, "exec_cache"):
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                 else:
@@ -76,7 +76,7 @@ def _wrap(func):
                 exec_cache.append(limited_locals.copy())
                 if len(exec_cache) > RECURSIVE_LIMIT_WHILE_EXEC:
                     exec_cache.pop(0) # TODO Hack for now, change this mechanism
-            for hasbt, ensurement in U.get_fun_prop(func, "ensures"):
+            for hasbt, ensurement, etext in U.get_fun_prop(func, "ensures"):
                 if hasbt:
                     bt = "__BACKTICK__"
                     exec_cache = U.get_fun_prop(func, "exec_cache")
@@ -84,11 +84,11 @@ def _wrap(func):
                         limited_locals.update({k+bt : v for k,v in cache_item.items()})
                         if not eval(ensurement, globals(), limited_locals):
                             print("DEBUG INFORMATION:", limited_locals)
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (etext, func.__name__))
                 else:
                     if not eval(ensurement, globals(), limited_locals):
                         print("DEBUG INFORMATION:", limited_locals)
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (ensurement, func.__name__))
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (etext, func.__name__))
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func
@@ -163,9 +163,11 @@ def ensures(condition):
         if "`" in e:
             bt = "__BACKTICK__"
             e = e.replace("`", bt)
-            U.set_fun_prop(func, "ensures", [(True, compile(e, '', 'eval'))]+ensures_statements)
+            compiled = compile(e, '', 'eval')
+            U.set_fun_prop(func, "ensures", [(True, compiled, condition)]+ensures_statements)
         else:
-            U.set_fun_prop(func, "ensures", [(False, compile(e, '', 'eval'))]+ensures_statements)
+            compiled = compile(e, '', 'eval')
+            U.set_fun_prop(func, "ensures", [(False, compiled, condition)]+ensures_statements)
         return _wrap(func)
     return _decorator
 

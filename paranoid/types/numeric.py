@@ -131,7 +131,17 @@ class RangeOpen(RangeClosedOpen, RangeOpenClosed):
 class Positive0(RangeClosedOpen):
     def __init__(self):
         return super().__init__(low=0, high=math.inf)
+    def generate(self):
+        yield 4.3445 # A float
+        yield 1
+        yield 10
+        yield from super().generate()
 
 class Positive(RangeOpen):
     def __init__(self):
         return super().__init__(low=0, high=math.inf)
+    def generate(self):
+        yield 4.3445 # A float
+        yield 1
+        yield 10
+        yield from super().generate()
