@@ -1,4 +1,5 @@
 from .exceptions import InternalError
+import inspect
 
 _FUN_PROPS = "__verify__"
 
@@ -65,3 +66,11 @@ def test_equality(a1, a2):
     return True
     
 
+def get_func_kwargs_name(f):
+    """Returns the name of the function f's keyword argument parameter if it exists, otherwise None"""
+    sigparams = inspect.signature(f).parameters
+    sig_kwargs = None
+    for p in sigparams:
+        if sigparams[p].kind == inspect.Parameter.VAR_KEYWORD:
+            return sigparams[p].name
+    return None

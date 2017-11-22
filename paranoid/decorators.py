@@ -4,6 +4,8 @@ import inspect
 from copy import deepcopy
 from . import utils as U
 from .types import base as T
+from .types.collections import Dict
+from .types.string import String
 from . import exceptions as E
 
 RECURSIVE_LIMIT_WHILE_EXEC = 100 # TODO temporary hack to improve performance, will change later.
@@ -28,9 +30,9 @@ def _wrap(func):
             #full_locals = locals().copy()
             #full_locals.update({k : v for k,v in zip(argspec.args, args)})
             full_locals = argvals
-            for requirement in U.get_fun_prop(func, "requires"):
+            for requirement,requirementtext in U.get_fun_prop(func, "requires"):
                 if not eval(requirement, globals(), full_locals):
-                    raise E.EntryConditionsError("Function requirement '%s' failed in %s" % (requirement,  func.__name__))
+                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__name__, str(full_locals)))
         # Function argument comparison: Allow testing for function
         # arguments which were modified.  To do so, first save an
         # extra copy of the testcase.
@@ -84,11 +86,11 @@ def _wrap(func):
                         limited_locals.update({k+bt : v for k,v in cache_item.items()})
                         if not eval(ensurement, globals(), limited_locals):
                             print("DEBUG INFORMATION:", limited_locals)
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (etext, func.__name__))
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str(limited_locals)))
                 else:
                     if not eval(ensurement, globals(), limited_locals):
                         print("DEBUG INFORMATION:", limited_locals)
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s" % (etext, func.__name__))
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str({k:v for k,v in limited_locals.items() if bt not in k})))
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func
@@ -112,6 +114,12 @@ def accepts(*argtypes, **kwargtypes):
                         for k,v in argtypes.items()}
         except TypeError:
             raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
+        # Support keyword arguments.  Find the name of the **kwargs
+        # parameter (not necessarily "kwargs") and set it to be a
+        # dictionary of unspecified types.
+        kwargname = U.get_func_kwargs_name(func)
+        if kwargname in argtypes.keys():
+            argtypes[kwargname] = Dict(String, T.Unchecked)
         if U.has_fun_prop(func, "argtypes"):
             raise ValueError("Cannot set argument types twice")
         U.set_fun_prop(func, "argtypes", argtypes)
@@ -128,6 +136,7 @@ def returns(returntype):
         return _wrap(func)
     return _decorator
 
+# Adds the "requires" property: list of (compiledcondition, conditiontext)
 def requires(condition):
     def _decorator(func):
         # @requires decorator
@@ -137,10 +146,11 @@ def requires(condition):
             base_requires = U.get_fun_prop(func, "requires")
         else:
             base_requires = []
-        U.set_fun_prop(func, "requires", [compile(condition, '', 'eval')]+base_requires)
+        U.set_fun_prop(func, "requires", [(compile(condition, '', 'eval'), condition)]+base_requires)
         return _wrap(func)
     return _decorator
 
+# Adds the "requires" property: list of (hasbacktick, compiledcondition, conditiontext)
 def ensures(condition):
     def _decorator(func):
     # @ensures decorator

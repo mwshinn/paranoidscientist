@@ -66,11 +66,14 @@ class Constant(Type):
 
 class Unchecked(Type):
     """Use type `typ` but do not check it."""
-    def __init__(self, typ):
-        self.typ = TypeFactory(typ)
+    def __init__(self, typ=None):
+        if typ is not None:
+            self.typ = TypeFactory(typ)
+        else:
+            self.typ = None
     def generate(self):
-        for gv in self.typ.generate():
-            yield gv
+        if typ is not None:
+            yield from self.typ.generate()
 
 class Generic(Type):
     def __init__(self, typ):

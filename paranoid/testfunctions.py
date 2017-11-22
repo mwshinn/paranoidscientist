@@ -39,12 +39,7 @@ def test_function(func):
     # execute the function once for each combination of arguments.
     totaltests = 0
     for tc in testcases:
-        # TODO Clean this up a bit
-        sigparams = inspect.signature(func).parameters
-        sig_kwargs = None
-        for p in sigparams:
-            if sigparams[p].kind == inspect.Parameter.VAR_KEYWORD:
-                sig_kwargs = sigparams[p].name
+        kwargs_name = utils.get_func_kwargs_name(func)
         try:
             kws = tc[sorted(args.keys()).index(sig_kwargs)] if sig_kwargs else {}
             func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != sig_kwargs},
