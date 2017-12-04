@@ -79,18 +79,18 @@ def _wrap(func):
                 if len(exec_cache) > RECURSIVE_LIMIT_WHILE_EXEC:
                     exec_cache.pop(0) # TODO Hack for now, change this mechanism
             for hasbt, ensurement, etext in U.get_fun_prop(func, "ensures"):
+                _bt = "__BACKTICK__"
                 if hasbt:
-                    bt = "__BACKTICK__"
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                     for cache_item in exec_cache:
-                        limited_locals.update({k+bt : v for k,v in cache_item.items()})
+                        limited_locals.update({k+_bt : v for k,v in cache_item.items()})
                         if not eval(ensurement, globals(), limited_locals):
                             print("DEBUG INFORMATION:", limited_locals)
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str(limited_locals)))
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str({k:v for k,v in limited_locals.items() if _bt not in k})))
                 else:
                     if not eval(ensurement, globals(), limited_locals):
                         print("DEBUG INFORMATION:", limited_locals)
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str({k:v for k,v in limited_locals.items() if bt not in k})))
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str(limited_locals)))
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func
@@ -171,8 +171,8 @@ def ensures(condition):
             assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
             e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
         if "`" in e:
-            bt = "__BACKTICK__"
-            e = e.replace("`", bt)
+            _bt = "__BACKTICK__"
+            e = e.replace("`", _bt)
             compiled = compile(e, '', 'eval')
             U.set_fun_prop(func, "ensures", [(True, compiled, condition)]+ensures_statements)
         else:

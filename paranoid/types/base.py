@@ -72,7 +72,7 @@ class Unchecked(Type):
         else:
             self.typ = None
     def generate(self):
-        if typ is not None:
+        if self.typ is not None:
             yield from self.typ.generate()
 
 class Generic(Type):
