@@ -44,7 +44,7 @@ type system.  Pythonic code relies on duck typing, which is great in
 many situations but is a nightmare for scientific programming.  As an
 example, consider the following:
 
-```
+```python
 M = get_data_as_matrix()
 M_squared = M**2
 print(M_squared.tolist())
@@ -55,16 +55,21 @@ have squared the matrix, and thus everything is okay.  However, if we
 look more closely, the result depends on the matrix type returned by
 `get_data_as_matrix`:
 
-```
+```python
 M = numpy.matrix([[1, 2], [3, 4]])
 M_squared = M**2
 print(M_squared.tolist())
->>> [[7, 10], [15, 22]]
 
 M = numpy.array([[1, 2], [3, 4]])
 M_squared = M**2
 print(M_squared.tolist())
->>> [[1, 4], [9, 16]]
+```
+
+which outputs
+
+```
+[[7, 10], [15, 22]]
+[[1, 4], [9, 16]]
 ```
 
 As we can see, the result of this computation depends on whether the
