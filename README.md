@@ -174,7 +174,7 @@ All types should inherit from `paranoid.base.Type`.
 
 Consider the following simple type:
 
-```
+```python
 from paranoid.types.base import Type
 
 class BinaryString(Type):
@@ -210,7 +210,7 @@ also be defined.  For instance, let's create a type for a binary
 string of some particular length.  Since these must by definition also
 be binary strings, we can inherit from the BinaryString type.
 
-```
+```python
 from paranoid.types.numeric import Natural0
 
 class FixedLengthBinaryString(BinaryString):
@@ -254,7 +254,18 @@ To come...
 
 ## Automated testing
 
-To come...
+Basic automatic unit-test--like functionality is available in Paranoid
+Scientist.  To use this feature on a file "myfile.py", run the
+following at the command line:
+
+    $ python3 -m paranoid myfile.py
+
+This will look through the file at each function containing "accepts"
+annotations, and generate a number of test cases for each function to
+ensure that the function doesn't fail, and ensure that it satisfies
+the "returns"/"ensures" exit conditions.
+
+This should **not** be used as a replacement for unit tests.
 
 ## License
 
@@ -262,12 +273,56 @@ All code is available under the GPLv3.
 
 ## FAQs
 
+### Is Paranoid Scientist only for scientific code?
+
+Paranoid Scientist was created with scientific code in mind.
+Therefore, design decisions have focused on the idea that incorrect
+behavior is infinitely worse than exiting with a runtime error.  The
+main implication for this is that there is no exception handling;
+errors cause the program to crash.  It is not only unnecessary, but
+also very undesirable, to handle errors automatically in scientific
+code.  If they are handled incorrectly, the result of the program
+could be incorrect. It is better to kill the program and let an expert
+analyze and fix the problem.
+
+There are many places where it is important to have correct code, and
+Paranoid Scientist is only applicable to a small subset of them.  **Do
+not** use it to steer a car, operate a laparoscope, or control a
+nuclear reactor.  **Do** use it to increase your confidence that your
+data analysis or computational model is not giving incorrect results
+due to software bugs.
+
+### So if I just want to reduce the number of bugs in my code, Paranoid Scientist is useless?
+
+Paranoid Scientist may also be used as a development tool.  Keeping it
+enabled at runtime probably not the best choice for user-facing
+software, but it can still be useful to catch bugs early by, e.g.,
+using it only as a contract-oriented programming library for Python.
+However, there are better tools for this job.
+
+Also, just to state this explicitly, do **not** use the
+automatically-generated test cases as a replacement for unit tests.
+
+### Is Paranoid Scientist fast?
+
+No.  Depending on which options you enable, which features you use,
+and how your code is written, your code will run 10%--1000% slower.
+The biggest culprits for slow runtime in Paranoid Scientist are
+verification conditions involving more than one variable
+(e.g. `return\`\``), asserting arguments are immutable, and functions
+with many arguments.
+
+However, Paranoid Scientist can easily be enabled or disabled at
+runtime with a single line of code.  When it is disabled, there is no
+performance loss.  Additionally, the automated unit tests described
+above may still be run when it is disabled at runtime.
+
 ### Why are Python lists and numpy 1D arrays different types?
 
 These types behave differently in many common situation which can lead
 to bugs.  For instance, consider the following function:
 
-```
+```python
 def add_lists(a, b):
     return a + b
 ```
