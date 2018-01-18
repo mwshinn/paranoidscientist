@@ -117,6 +117,15 @@ class Function(Type):
     def generate(self):
         raise NoGeneratorError
 
+class Boolean(Type):
+    """True or False"""
+    def test(self, v):
+        super().test(v)
+        assert v in [True, False], "Not a boolean"
+    def generate(self):
+        yield True
+        yield False
+
 class And(Type):
     """Conforms to all of the given types.
 

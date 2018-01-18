@@ -143,7 +143,35 @@ The `Natural1` type represents a natural number excluding zero, the
 `Natural0` type is a natural number including zero, and `Range` is any
 number within the range.
 
-## Creating custom types
+Additionally, the same syntax can be used in class methods, as long as
+the class is flagged with the `@verifiedclass` decorator.  The special
+type `Self` should be used for the `self` arguments in class methods.
+
+``` python
+@verifiedclass
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    @accepts(Self, Number, Number, Number, Number)
+    @returns(Boolean)
+    def is_in_box(self, xmin, xmax, ymin, ymax):
+        if self.x > xmin and \
+           self.x < xmax and \
+           self.y > ymin and \
+           self.y < ymax:
+            return True
+        return False
+```
+
+Currently, Paranoid Scientist does not operate on the `__init__`
+method.  This is because, unlike all other methods in a class, the
+`self` argument does not represent a fully instantiated class.  In
+other words, the purpose of the `__init__` function is to help create
+the `self` object, and therefore it does not make sense to test
+whether the `self` object is valid, because clearly it is not.
+
+## Creating types
 
 It is relatively easy to create new types, and expected that you will
 need to make several new types for each script you use with Paranoid
@@ -152,7 +180,7 @@ Scientist.
 There are two ways to make new types.  They can either be created from
 scratch, or an existing class can be converted into a type.
 
-### From scratch
+### Creating types from scratch
 
 A type is a class which can be used to evaluate whether an arbitrary
 value is a part of the type, and to generate new values of the type. 
@@ -244,15 +272,100 @@ Again, this works as we expect it to.
              for v in FixedLengthBinaryString(4).generate()])
     True
 
-### From an existing class
+### Creating types from an existing class
 
-To come...
+Any normal Python class can be converted into a type.  In essence,
+this allows the data within the class to be validated and tested.  Any
+class can be turned into a type by adding two static methods:
+`_test(v)`, and `_generate()`, which are analogous to the `test(self,
+v)` and `generate(self)` functions described previously.
 
-## Entry and exit conditions
+Let's look back at our example of the point in 2D space and turn this
+into a type.
 
-To come...
+``` python
+@verifiedclass
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    @accepts(Self, Number, Number, Number, Number)
+    @returns(Boolean)
+    def is_in_box(self, xmin, xmax, ymin, ymax):
+        if self.x > xmin and \
+           self.x < xmax and \
+           self.y > ymin and \
+           self.y < ymax:
+            return True
+        return False
+    @staticmethod
+    def _test(v):
+        assert v.x in Number(), "Invalid X coordinate"
+        assert v.y in Number(), "Invalid Y coordinate"
+    @staticmethod
+    def _generate():
+        yield Point(0, 0)
+        yield Point(1, 4/7)
+        yield Point(-10, -1.99)
+```
+
+Types based on classes do not override the `in` syntax.
+
+    >>> Point._test(Point(3, 4))
+    >>> Point._test(Point(3, "4"))
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "<stdin>", line 18, in _test
+    AssertionError: Invalid Y coordinate
+    >>> [Point._test(v) for v in Point._generate()]
+    [None, None, None]
+
+As you can see, the `_test(v)` function takes a single variable input,
+and tests to see if it is a valid member of this class.  Valid
+instances of this class should have `self.x` and `self.y` values which
+are numbers.  It would not be valid to use a string for an x position.
+
+Likewise, the `_generate()` function yields valid instances of this
+class.
+
+Unlike when we create types from scratch, we do **not** pass the
+`self` argument to these functions because they are static methods.
+This is because the type is defined based on the class, not based on
+the instance of the class.
+
+Using this syntax makes these types valid for all argument and return
+types.  For example, we can define a function which takes Points as
+arguments and returns a Point:
+
+```python
+@accepts(Point, Point)
+@returns(Point)
+def midpoint(p1, p2):
+    xmid = p2.x + (p1.x - p2.x)/2
+    ymid = p2.y + (p1.y - p2.y)/2
+    return Point(xmid, ymid)
+```
+
+Running the standard tests on this, we see:
+
+    >>> mp = midpoint(Point(0, 0), Point(1, 2))
+    >>> mp.x, mp.y
+    (0.5, 1.0)
+    >>> midpoint(3, 5)
+    Traceback (most recent call last):
+      ...
+    paranoid.exceptions.ArgumentTypeError: Invalid argument type: p1=3 is not of type Generic(<class '__main__.Point'>) in midpoint
+    >>> [Point._test(midpoint(v1, v2)) \
+           for v1 in Point._generate() for v2 in Point._generate()]
+    [None, None, None, None, None, None, None, None, None]
 
 ## Automated testing
+
+As you can see from many of the examples given here, it makes sense to
+test functions by generating values to pass to the function using the
+`accepts` type information, and checking that the return values fit
+the `returns` type information.  Indeed, Paranoid Scientist will
+automate this process.
 
 Basic automatic unit-test--like functionality is available in Paranoid
 Scientist.  To use this feature on a file "myfile.py", run the
@@ -266,6 +379,59 @@ ensure that the function doesn't fail, and ensure that it satisfies
 the "returns"/"ensures" exit conditions.
 
 This should **not** be used as a replacement for unit tests.
+
+## Entry conditions
+
+In addition to the `accepts` and `returns` conditions, we can also
+specify more complex relationships among variables.  No type can
+define interactions between multiple variables.  For this, we can use
+the `requires` operator to specify entry conditions.  This takes a
+string of valid Python describing the relationship between the
+variables.
+
+Consider for instance the following:
+
+``` python
+@accepts(Number, Number)
+def invert_difference(x, y):
+    return 1/(x-y)
+```
+
+As you can see, this function is not defined when x and y are equal to
+each other.  There is no way to define types for x and y without
+taking into account their values.  Instead, Paranoid Scientist allows
+us to write:
+
+``` python
+@accepts(Number, Number)
+@requires("x != y")
+def invert_difference(x, y):
+    return 1/(x-y)
+```
+
+It is also possible to use the `requires` decorator to simplify highly
+redundant types.  For example, we could write:
+
+``` python
+@accepts(Number)
+@requires("x != 0")
+def invert(x):
+    return 1/x
+```
+
+There is no type that means "all numbers except zero".  While it would
+be possible to create such a type for the purposes of this function,
+it would start to get messy very quickly to have distinct but nearly
+identical types for each function. It is more practical in this
+example to put a constraint on the function's domain using the
+`requires` condition.
+
+Automated tests will only test functions if their entry conditions are
+satisfied.
+
+## Exit conditions
+
+To come...
 
 ## License
 
