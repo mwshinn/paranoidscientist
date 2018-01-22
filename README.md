@@ -491,7 +491,8 @@ def monotonic(x):
 
 ## License
 
-All code is available under the GPLv3.
+All code is available under the MIT license.  See LICENSE.txt for more
+information.
 
 ## FAQs
 
