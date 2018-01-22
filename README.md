@@ -431,7 +431,63 @@ satisfied.
 
 ## Exit conditions
 
-To come...
+In addition to entry conditions, it is also possible to specify exit
+conditions in a similar manner.  Exit conditions are notated similarly
+to entry conditions (i.e. Python code inside a string) using the
+`ensures` decorator, and specify what must hold after the function
+executes.  Exit conditions use the magic variable "return" to describe
+how the arguments must relate to return values.  For example,
+
+``` python
+@accepts(List(Number))
+@returns(Number)
+@ensures('min(l) < return < max(l)')
+def mean(l):
+    return sum(l)/len(l)
+```
+
+    >>> mean([1, 3, 2, 4])
+    2.5
+    >>> mean([1, 1, 1, 1])
+    Traceback (most recent call last):
+        ...
+    paranoid.exceptions.ExitConditionsError: Ensures statement 'min(l) < return < max(l)' failed in mean
+    params: {'l': [1, 1, 1, 1], '__RETURN__': 1.0}
+
+For convenience, exit conditions also allow two new pseudo-operators,
+`-->` and `<-->`, which mean "if" and "if and only if" respectively.
+For example,
+
+``` python
+@accepts(Number)
+@returns(Number)
+@ensures('return == 0 <--> x == 0')
+def quadratic(x):
+    return x*x
+```
+
+Among the four types of conditions which can be imposed upon functions
+(argument types, return types, entry conditions, and exit conditions),
+exit conditions are unique in that they can also use *previous* values
+from a function's execution to test more complex properties of the
+function.
+
+In order to use a previous value within exit conditions, add a
+backtick after the variable name, e.g. `x` is the current value and
+`x\`` is any previous value of x.  (The pneumonic for this is $$x$$
+for the variable and $$x'$$ for previous values as might be written in
+a universal quantifier, e.g. $$\forall x,x' \in S : \ldots$$.
+
+Why is this useful?  Now, we can test complex properties like a
+function's monotonicity:
+
+``` python
+@accepts(Number)
+@returns(Number)
+@ensures("x > x` --> return >= return`")
+def monotonic(x):
+    return x**3
+```
 
 ## License
 
