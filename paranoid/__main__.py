@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # Include the paranoid code in a predictable way
     prefix = "import paranoid as __paranoidmod;__paranoidmod.decorators.__ALL_FUNCTIONS = [];"
     # Get rid of relative imports
-    script_contents = re.sub(r'from\s+\.([A-Za-z0-9_])\s+import', r'from \1 import', script_contents)
+    script_contents = re.sub(r'from\s+\.([A-Za-z0-9_]+)\s+import', r'from \1 import', script_contents)
     script_contents = re.sub(r'from\s+\.\s+import', r'import', script_contents)
     # Execute to find the functions and save them.
     exec(prefix + script_contents, globs)

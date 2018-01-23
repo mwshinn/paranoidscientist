@@ -204,7 +204,7 @@ class NDArray(Type):
             assert (d in Integer())  and d>0
         # TODO support non-numeric types
         if typ is not None:
-            assert issubclass(typ, Numeric)
+            assert isinstance(TypeFactory(typ), Type)
             self.type = TypeFactory(typ)
         else:
             self.type = None
@@ -219,12 +219,32 @@ class NDArray(Type):
                     "Array value %s is not of type %s" % (fv, repr(self.type))
     def generate(self):
         # TODO fix, and more of these
-        # if self.type:
-        #     vals = [e for e in self.type.generate()]
-        # else:
-        #     vals = [0, 1, 2, 3, 4, 5]
-        # if self.d and vals:
-        #     yield np.broadcast_to(vals[0], self.d)
-        # if vals:
-        yield np.asarray([-1, 0, 1])
+        if self.type:
+            vals = [e for e in self.type.generate()]
+        else:
+            vals = [3, 4, 5, 6, 7, 8, 9, 10]
+        if self.d:
+            dimspecs = [tuple([5]*self.d)]
+        else:
+            dimspecs = [(20,), (5,5), (3,3,3), (200,)]
+        # Check basic values
+        if not self.type or 0 in self.type:
+            yield np.zeros(dimspecs[0], dtype=np.float64)
+        if not self.type or 1 in self.type:
+            yield np.ones(dimspecs[0], dtype=np.int32)
+        if not self.type or -1 in self.type:
+            yield -np.ones(dimspecs[0])
+        if not self.type or np.nan in self.type:
+            yield np.ones(dimspecs[0])*np.nan
+        if not self.type or np.inf in self.type:
+            yield np.ones(dimspecs[0])*np.inf
+        if not self.type or -np.inf in self.type:
+            yield np.ones(dimspecs[0])*-np.inf
+        # Check all dimensions
+        for d in dimspecs:
+            yield np.tile(vals[0], d)
+        # Check for arrays with not a single value
+        lenneeded = int(np.prod(dimspecs[0]))
+        copies = int(np.ceil(lenneeded/len(vals)))
+        yield np.reshape((vals*copies)[0:lenneeded], dimspecs[0])
 
