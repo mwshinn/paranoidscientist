@@ -7,6 +7,8 @@
 __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
            'Self', 'Nothing', 'Function', 'And', 'Or']
 
+from ..exceptions import VerifyError
+
 def TypeFactory(v):
     """Ensure `v` is a valid Type.
 
@@ -175,3 +177,19 @@ class Or(Type):
         ng = (e for t in self.types for e in t.generate())
         for g in ng:
             yield g
+
+class Not(Type):
+    """Valid if the given type fails.
+
+    Takes one type as an argument.  Valid values are not of this type.
+
+    Note that this should be avoided when possible, as it cannot
+    generate values.  It is most useful within an And clause.
+    """
+    def __init__(self, typ):
+        super().__init__()
+        self.type = TypeFactory(typ)
+    def test(self, v):
+        assert not (v in self.type), "Not clause does not hold"
+    def generate(self):
+        pass
