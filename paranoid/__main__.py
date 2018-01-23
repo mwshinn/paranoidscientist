@@ -5,6 +5,7 @@
 # information.
 
 import sys
+import re
 from .testfunctions import test_function
 
 # If called as "python3 -m verify script_file_name.py", then unit test
@@ -33,8 +34,15 @@ if __name__ == "__main__":
     # execution so that we can find the __ALL_FUNCTIONS variable once
     # the script has finished executing.
     globs = {} # Global variables from script execution
+    # Get the script file's text
+    script_contents = open(sys.argv[1], "r").read()
+    # Include the paranoid code in a predictable way
     prefix = "import paranoid as __paranoidmod;__paranoidmod.decorators.__ALL_FUNCTIONS = [];"
-    exec(prefix+open(sys.argv[1], "r").read(), globs)
+    # Get rid of relative imports
+    script_contents = re.sub(r'from\s+\.([A-Za-z0-9_])\s+import', r'from \1 import', script_contents)
+    script_contents = re.sub(r'from\s+\.\s+import', r'import', script_contents)
+    # Execute to find the functions and save them.
+    exec(prefix + script_contents, globs)
     all_functions = globs["__paranoidmod"].decorators.__ALL_FUNCTIONS
     # Test each function from the script.
     for f in all_functions:
