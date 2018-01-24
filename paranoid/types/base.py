@@ -203,3 +203,24 @@ class Not(Type):
         assert not (v in self.type), "Not clause does not hold"
     def generate(self):
         pass
+
+class PositionalArguments(Type):
+    """Function optional positional arguments."""
+    def test(self, v):
+        super().test(v)
+        assert isinstance(v, tuple), "Non-dict passed"
+    def generate(self):
+        yield ()
+
+
+class KeywordArguments(Type):
+    """Function optional keyword arguments."""
+    def test(self, v):
+        super().test(v)
+        assert isinstance(v, dict), "Non-dict passed"
+        for e in v.keys():
+            isinstance(e, str)
+    def generate(self):
+        yield {}
+
+

@@ -125,13 +125,13 @@ def accepts(*argtypes, **kwargtypes):
         # dictionary of unspecified types.
         kwargname = U.get_func_kwargs_name(func)
         if kwargname in argtypes.keys():
-            argtypes[kwargname] = Dict(String, T.Unchecked)
+            argtypes[kwargname] = T.KeywordArguments()
         # Support positional arguments.  Find the name of the *args
         # parameter (not necessarily "args") and set it to be an
         # unspecified type.
         posargname = U.get_func_posargs_name(func)
         if posargname in argtypes.keys():
-            argtypes[posargname] = T.Unchecked() # TODO maybe make this a tuple # TODO merge with actual argument names
+            argtypes[posargname] = T.PositionalArguments() # TODO merge with actual argument names
         if U.has_fun_prop(func, "argtypes"):
             raise ValueError("Cannot set argument types twice")
         U.set_fun_prop(func, "argtypes", argtypes)
