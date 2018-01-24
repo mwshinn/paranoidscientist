@@ -42,14 +42,36 @@ class Numeric(Type):
             yield np.int0(-1)
             yield np.float16(3.141)
             yield np.float128(.01)
-            
 
-class Number(Numeric):
+class ExtendedReal(Numeric):
+    """Any integer or float, excluding nan."""
+    def test(self, v):
+        super().test(v)
+        assert not math.isnan(v), "Number cannot be nan"
+    def generate(self):
+        # Check infinity, nan, 0, +/- numbers, a float, a small/big number
+        yield math.inf # Check infs
+        yield -math.inf
+        yield 0
+        yield 1
+        yield -1
+        yield 3.141 # A float
+        yield 1e-10 # A small number
+        yield 1e10 # A big number
+        if USE_NUMPY:
+            yield np.inf
+            yield -np.inf
+            yield np.int0(0)
+            yield np.uint16(1)
+            yield np.int0(-1)
+            yield np.float16(3.141)
+            yield np.float128(.01)
+
+class Number(ExtendedReal):
     """Any integer or float, excluding inf, -inf, and nan."""
     def test(self, v):
         super().test(v)
         assert isinstance(v, NUMERIC_TYPES), "Invalid number"
-        assert not math.isnan(v), "Number cannot be nan"
         assert not math.isinf(v), "Number must be finite"
     def generate(self):
         yield 0

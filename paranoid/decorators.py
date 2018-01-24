@@ -10,7 +10,7 @@ import inspect
 from copy import deepcopy
 from . import utils as U
 from .types import base as T
-from .types.collections import Dict
+from .types.collections import Dict, List
 from .types.string import String
 from . import exceptions as E
 
@@ -126,6 +126,12 @@ def accepts(*argtypes, **kwargtypes):
         kwargname = U.get_func_kwargs_name(func)
         if kwargname in argtypes.keys():
             argtypes[kwargname] = Dict(String, T.Unchecked)
+        # Support positional arguments.  Find the name of the *args
+        # parameter (not necessarily "args") and set it to be an
+        # unspecified type.
+        posargname = U.get_func_posargs_name(func)
+        if posargname in argtypes.keys():
+            argtypes[posargname] = T.Unchecked() # TODO maybe make this a tuple # TODO merge with actual argument names
         if U.has_fun_prop(func, "argtypes"):
             raise ValueError("Cannot set argument types twice")
         U.set_fun_prop(func, "argtypes", argtypes)

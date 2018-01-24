@@ -71,11 +71,17 @@ def test_equality(a1, a2):
                 return False
     return True
     
+def get_func_posargs_name(f):
+    """Returns the name of the function f's keyword argument parameter if it exists, otherwise None"""
+    sigparams = inspect.signature(f).parameters
+    for p in sigparams:
+        if sigparams[p].kind == inspect.Parameter.VAR_POSITIONAL:
+            return sigparams[p].name
+    return None
 
 def get_func_kwargs_name(f):
     """Returns the name of the function f's keyword argument parameter if it exists, otherwise None"""
     sigparams = inspect.signature(f).parameters
-    sig_kwargs = None
     for p in sigparams:
         if sigparams[p].kind == inspect.Parameter.VAR_KEYWORD:
             return sigparams[p].name

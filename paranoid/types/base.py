@@ -7,7 +7,7 @@
 __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
            'Self', 'Nothing', 'Function', 'And', 'Or']
 
-from ..exceptions import VerifyError
+from ..exceptions import VerifyError, NoGeneratorError
 
 def TypeFactory(v):
     """Ensure `v` is a valid Type.
@@ -65,10 +65,10 @@ class Constant(Type):
         assert const is not None, "None cannot be a constant"
         self.const = const
     def __repr__(self):
-        return "Constant(%s)" % self.const
+        return "Constant(%s)" % repr(self.const)
     def test(self, v):
         super().test(v)
-        assert self.const == v
+        assert self.const == v, "Invalid constant"
     def generate(self):
         yield self.const
 
@@ -84,20 +84,30 @@ class Unchecked(Type):
             yield from self.typ.generate()
 
 class Generic(Type):
+    """Wraps Python classes to turn them into Types.
+
+    Classes may optionally contain the "_test_(v)" or "_generate()"
+    static methods; adding these two functions gives them the same
+    power as traditional Types.  "_test(v)" should check if `v` is a
+    valid member of the class using assert statements only, and
+    "_generate()" should yield a finite number of instances of the class.
+    """
     def __init__(self, typ):
         super().__init__()
         assert isinstance(typ, type)
+        assert not isinstance(typ, Type), "Types don't need to be wrapped"
         self.type = typ
     def test(self, v):
         assert isinstance(v, self.type)
-        if hasattr(self.type, "_test") and callable(self.type._test):
-            return self.type._test(v)
+        type_and_parents = reversed(self.type.mro()[:-1]) # -1 removes <class 'object'>
+        for t in type_and_parents:
+            if hasattr(t, "_test") and callable(t._test):
+                t._test(v)
     def __repr__(self):
         return "Generic(%s)" % self.type
     def generate(self):
         if hasattr(self.type, "_generate") and callable(self.type._generate):
-            for v in self.type._generate():
-                yield v
+            yield from self.type._generate()
         else:
             raise NoGeneratorError("Please define a _generate() function in "
                                    "class %s." % self.type.__name__)
