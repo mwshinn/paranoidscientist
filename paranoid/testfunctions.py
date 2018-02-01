@@ -28,11 +28,11 @@ def max_run_time(t):
         raise TestCaseTimeoutError
     if "alarm" in signal.__dict__ and "SIGALRM" in signal.__dict__:
         signal.signal(signal.SIGALRM, callback)
-        signal.alarm(t)
+        signal.setitimer(signal.ITIMER_REAL, t)
         try:
             yield
         finally:
-            signal.alarm(0) # Cancel alarm
+            signal.setitimer(signal.ITIMER_REAL, 0) # Cancel alarm
     else:
         yield
 
@@ -75,7 +75,7 @@ def test_function(func):
         kwargs_name = utils.get_func_kwargs_name(func)
         try:
             kws = tc[sorted(args.keys()).index(kwargs_name)] if kwargs_name else {}
-            with max_run_time(1):
+            with max_run_time(.1):
                 func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != kwargs_name},
                      **kws)
                 totaltests += 1

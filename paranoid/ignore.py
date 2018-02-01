@@ -19,5 +19,5 @@ def ensures(condition):
 def immutable_argument(func):
     return func
 
-def verifiedclass(cls):
+def paranoidclass(cls):
     return cls

@@ -4,7 +4,7 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-__all__ = ['accepts', 'requires', 'returns', 'ensures', 'immutable_argument', 'verifiedclass']
+__all__ = ['accepts', 'requires', 'returns', 'ensures', 'immutable_argument', 'paranoidclass']
 import functools
 import inspect
 from copy import deepcopy
@@ -198,7 +198,7 @@ def immutable_argument(func):
     return _wrap(func)
 
 
-def verifiedclass(cls):
+def paranoidclass(cls):
     for methname in dir(cls):
         meth = getattr(cls, methname)
         if U.has_fun_prop(meth, "argtypes"):

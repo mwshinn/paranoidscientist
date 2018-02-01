@@ -115,9 +115,9 @@ class Generic(Type):
 class Self(Type):
     """Used only as a placeholder for methods with a 'self' argument."""
     def test(self, v):
-        raise VerifyError("Invalid use of the Self type. (Did you forget to use @verifiedclass?)")
+        raise VerifyError("Invalid use of the Self type. (Did you forget to use @paranoidclass?)")
     def generate(self):
-        raise VerifyError("Invalid use of the Self type. (Did you forget to use @verifiedclass?)")
+        raise VerifyError("Invalid use of the Self type. (Did you forget to use @paranoidclass?)")
 
 class Nothing(Type):
     """The None type."""
