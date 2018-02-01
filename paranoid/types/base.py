@@ -5,7 +5,7 @@
 # information.
 
 __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
-           'Self', 'Nothing', 'Function', 'And', 'Or']
+           'Self', 'Nothing', 'Function', 'Boolean', 'And', 'Or', 'Not']
 
 from ..exceptions import VerifyError, NoGeneratorError
 

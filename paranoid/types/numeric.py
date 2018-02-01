@@ -31,8 +31,8 @@ class Numeric(Type):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-10 # A small number
-        yield 1e10 # A big number
+        yield 1e-4 # A small number
+        yield 1e4 # A big number
         if USE_NUMPY:
             yield np.inf
             yield -np.inf
@@ -56,8 +56,8 @@ class ExtendedReal(Numeric):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-10 # A small number
-        yield 1e10 # A big number
+        yield 1e-4 # A small number
+        yield 1e4 # A big number
         if USE_NUMPY:
             yield np.inf
             yield -np.inf
@@ -78,8 +78,8 @@ class Number(ExtendedReal):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-10 # A small number
-        yield 1e10 # A large number
+        yield 1e-4 # A small number
+        yield 1e4 # A large number
         if USE_NUMPY:
             yield np.int0(0)
             yield np.uint16(1)
@@ -138,7 +138,12 @@ class Natural1(Natural0):
             yield np.uint0(1)
 
 class Range(Number):
-    """Any integer or float from `low` to `high`, inclusive."""
+    """Any integer or float from `low` to `high`, inclusive.
+
+    Note that this does NOT include correction for floating point
+    roundoff errors.  This is because, if there are floating point
+    roundoff errors, some code may fail.
+    """
     def __init__(self, low, high):
         super().__init__()
         assert low in Numeric() and high in Numeric(), "Invalid bounds"
@@ -218,21 +223,22 @@ class Positive(RangeOpen):
         yield from super().generate()
 
 class NDArray(Type):
-    """A numpy ndarray of dimension `d` and type `typ`."""
-    def __init__(self, d=None, typ=None):
+    """A numpy ndarray of dimension `d` and type `t`."""
+    def __init__(self, d=None, t=None):
         super().__init__()
         assert USE_NUMPY, "Numpy support not enabled"
         if d is not None:
             assert (d in Integer())  and d>0
         # TODO support non-numeric types
-        if typ is not None:
-            assert isinstance(TypeFactory(typ), Type)
-            self.type = TypeFactory(typ)
+        if t is not None:
+            assert isinstance(TypeFactory(t), Type)
+            self.type = TypeFactory(t)
         else:
             self.type = None
         self.d = d
     def test(self, v):
         super().test(v)
+        assert isinstance(v, np.ndarray), "V is not an NDArray, it is a " + str(type(v))
         if self.d is not None:
             assert len(v.shape) == self.d
         if self.type is not None:

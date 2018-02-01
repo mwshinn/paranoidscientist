@@ -28,7 +28,7 @@ def _wrap(func):
                 try:
                     argtypes[k].test(argvals[k])
                 except AssertionError as e:
-                    raise E.ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__name__))
+                    raise E.ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__qualname__))
         # @requires decorator
         if U.has_fun_prop(func, "requires"):
             argvals = inspect.getcallargs(func, *args, **kwargs)
@@ -38,7 +38,7 @@ def _wrap(func):
             full_locals = argvals
             for requirement,requirementtext in U.get_fun_prop(func, "requires"):
                 if not eval(requirement, globals(), full_locals):
-                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__name__, str(full_locals)))
+                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_locals)))
         # Function argument comparison: Allow testing for function
         # arguments which were modified.  To do so, first save an
         # extra copy of the testcase.
@@ -52,7 +52,7 @@ def _wrap(func):
             try:
                 U.get_fun_prop(func, "returntype").test(returnvalue)
             except AssertionError as e:
-                raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__name__) )
+                raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__qualname__) )
         # Function argument comparison: To finish comparing arguments,
         # test the arguments for equality.  We cannot check for simple
         # equality because many objects have identity equality
@@ -92,11 +92,11 @@ def _wrap(func):
                         limited_locals.update({k+_bt : v for k,v in cache_item.items()})
                         if not eval(ensurement, globals(), limited_locals):
                             print("DEBUG INFORMATION:", limited_locals)
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str({k:v for k,v in limited_locals.items() if _bt not in k})))
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str({k:v for k,v in limited_locals.items() if _bt not in k})))
                 else:
                     if not eval(ensurement, globals(), limited_locals):
                         print("DEBUG INFORMATION:", limited_locals)
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__name__, str(limited_locals)))
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(limited_locals)))
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func
@@ -119,7 +119,7 @@ def accepts(*argtypes, **kwargtypes):
             argtypes = {k: v if issubclass(type(v), T.Type) else T.Constant(v)
                         for k,v in argtypes.items()}
         except TypeError:
-            raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__name__)
+            raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__qualname__)
         # Support keyword arguments.  Find the name of the **kwargs
         # parameter (not necessarily "kwargs") and set it to be a
         # dictionary of unspecified types.
@@ -175,12 +175,12 @@ def ensures(condition):
         e = condition.replace("return", "__RETURN__")
         if "<-->" in e:
             e_parts = e.split("<-->")
-            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
+            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__qualname__)
             e = "((%s) if (%s) else True) and ((%s) if (%s) else True)" % (e_parts[1], e_parts[0], e_parts[0], e_parts[1])
-            assert "-->" not in e, "Only one implies per statement in %s condition %s"  % (ensurement, func.__name__)
+            assert "-->" not in e, "Only one implies per statement in %s condition %s"  % (ensurement, func.__qualname__)
         if "-->" in e:
             e_parts = e.split("-->")
-            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__name__)
+            assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__qualname__)
             e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
         if "`" in e:
             _bt = "__BACKTICK__"
@@ -206,4 +206,7 @@ def verifiedclass(cls):
             if "self" in argtypes and isinstance(argtypes["self"], T.Self):
                 argtypes["self"] = T.Generic(cls)
                 U.set_fun_prop(meth, "argtypes", argtypes) # TODO Not necessary because of reference
+        if U.has_fun_prop(meth, "returntype"):
+            if isinstance(U.get_fun_prop(meth, "returntype"), T.Self):
+                U.set_fun_prop(meth, "returntype", T.Generic(cls))
     return cls
