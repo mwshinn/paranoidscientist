@@ -6,8 +6,35 @@
 
 import inspect
 import itertools
+import signal
+from contextlib import contextmanager
 from . import utils
-from .exceptions import NoGeneratorError, EntryConditionsError
+from .exceptions import NoGeneratorError, EntryConditionsError, TestCaseTimeoutError
+
+@contextmanager
+def max_run_time(t):
+    """Limit the runtime of a code segment.
+
+    If a block of code runs for more than `t` seconds, kill it.  This
+    only works on *nix platforms; on Windows, there will be no time
+    limit.
+    
+    Use within a with statement, e.g.
+
+        with max_run_time(5):
+            potentially_long_function()
+    """
+    def callback(s=None, f=None):
+        raise TestCaseTimeoutError
+    if "alarm" in signal.__dict__ and "SIGALRM" in signal.__dict__:
+        signal.signal(signal.SIGALRM, callback)
+        signal.alarm(t)
+        try:
+            yield
+        finally:
+            signal.alarm(0) # Cancel alarm
+    else:
+        yield
 
 def test_function(func):
     """Perform a unit test of a single function.
@@ -48,9 +75,12 @@ def test_function(func):
         kwargs_name = utils.get_func_kwargs_name(func)
         try:
             kws = tc[sorted(args.keys()).index(kwargs_name)] if kwargs_name else {}
-            func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != kwargs_name},
-                 **kws)
-            totaltests += 1
+            with max_run_time(1):
+                func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != kwargs_name},
+                     **kws)
+                totaltests += 1
         except EntryConditionsError:
             continue
+        except TestCaseTimeoutError:
+            print("Funciton timeout, continuing")
     return totaltests

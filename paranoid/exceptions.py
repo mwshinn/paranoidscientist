@@ -32,3 +32,7 @@ class InternalError(VerifyError):
 
 class ObjectModifiedError(VerifyError):
     pass
+
+
+class TestCaseTimeoutError(VerifyError):
+    pass

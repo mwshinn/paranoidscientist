@@ -31,8 +31,8 @@ class Numeric(Type):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-4 # A small number
-        yield 1e4 # A big number
+        yield 1e-10 # A small number
+        yield 1e10 # A big number
         if USE_NUMPY:
             yield np.inf
             yield -np.inf
@@ -56,8 +56,8 @@ class ExtendedReal(Numeric):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-4 # A small number
-        yield 1e4 # A big number
+        yield 1e-10 # A small number
+        yield 1e10 # A big number
         if USE_NUMPY:
             yield np.inf
             yield -np.inf
@@ -78,8 +78,8 @@ class Number(ExtendedReal):
         yield 1
         yield -1
         yield 3.141 # A float
-        yield 1e-4 # A small number
-        yield 1e4 # A large number
+        yield 1e-10 # A small number
+        yield 1e10 # A large number
         if USE_NUMPY:
             yield np.int0(0)
             yield np.uint16(1)
