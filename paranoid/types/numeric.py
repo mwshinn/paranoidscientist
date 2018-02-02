@@ -67,12 +67,13 @@ class ExtendedReal(Numeric):
             yield np.float16(3.141)
             yield np.float128(.01)
 
-class Number(ExtendedReal):
+class Number(Numeric):
     """Any integer or float, excluding inf, -inf, and nan."""
     def test(self, v):
         super().test(v)
         assert isinstance(v, NUMERIC_TYPES), "Invalid number"
         assert not math.isinf(v), "Number must be finite"
+        assert not math.isnan(v), "Number cannot be nan"
     def generate(self):
         yield 0
         yield 1
@@ -121,7 +122,7 @@ class Natural0(Integer):
             yield np.int64(0)
             yield np.uint0(1)
 
-class Natural1(Natural0):
+class Natural1(Integer):
     """Any natural number excluding 0."""
     def test(self, v):
         super().test(v)
@@ -193,34 +194,37 @@ class RangeOpenClosed(Range):
             if v != self.low:
                 yield v
 
-class RangeOpen(RangeClosedOpen, RangeOpenClosed):
+class RangeOpen(Range):
     """Any number in the open interval from `low` to `high`."""
     def test(self, v):
         super().test(v)
+        assert v != self.low
+        assert v != self.high
     def generate(self):
         for v in Range.generate(self):
             if not v in [self.low, self.high]:
                 yield v
 
-class Positive0(RangeClosedOpen):
+class Positive0(Number):
     """A positive number, including zero."""
-    def __init__(self):
-        return super().__init__(low=0, high=math.inf)
+    def test(self, v):
+        super().test(v)
+        assert v >= 0
     def generate(self):
         yield 4.3445 # A float
         yield 1
         yield 10
-        yield from super().generate()
+        yield 0
 
-class Positive(RangeOpen):
+class Positive(Number):
     """A positive number, excluding zero."""
-    def __init__(self):
-        return super().__init__(low=0, high=math.inf)
+    def test(self, v):
+        super().test(v)
+        assert v > 0
     def generate(self):
         yield 4.3445 # A float
         yield 1
         yield 10
-        yield from super().generate()
 
 class NDArray(Type):
     """A numpy ndarray of dimension `d` and type `t`."""
