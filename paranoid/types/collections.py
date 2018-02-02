@@ -68,7 +68,7 @@ class ParametersDict(Type):
     key must be of the type specified.  Note that not all of the keys
     in `params` must be specified for this type to be valid.
     """
-    def __init__(self, params):
+    def __init__(self, params, all_mandatory=False):
         super().__init__()
         # Future note: if this is modified to work with non-strings
         # for keys, then adjust the test() function accordingly, in
@@ -77,11 +77,17 @@ class ParametersDict(Type):
         # instead of value.
         assert all((isinstance(k, str) for k in params.keys()))
         self.params = {k: TypeFactory(v) for k,v in params.items()}
+        assert all_mandatory in [True, False]
+        self.all_mandatory = all_mandatory
     def test(self, v):
         super().test(v)
         assert isinstance(v, dict), "Non-dict passed"
         assert not set(v.keys()) - set(self.params.keys()), \
             "Invalid reward keys"
+        if self.all_mandatory:
+            assert set(v.keys()) == set(self.params.keys()), \
+                "All keys are mandatory, but missing: " + \
+                str(set(self.params.keys()) - set(v.keys()))
         for k in v.keys():
             self.params[k].test(v[k])
     def generate(self):

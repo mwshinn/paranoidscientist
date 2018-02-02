@@ -14,59 +14,48 @@ from .types.collections import Dict, List
 from .types.string import String
 from . import exceptions as E
 
-RECURSIVE_LIMIT_WHILE_EXEC = 100 # TODO temporary hack to improve performance, will change later.
+RECURSIVE_LIMIT_WHILE_EXEC = 1 # TODO temporary hack to improve performance, will change later.
 
-def _wrap(func):
-    def _decorated(*args, **kwargs):
-        # @accepts decorator
-        if U.has_fun_prop(func, "argtypes"):
-            argtypes = U.get_fun_prop(func, "argtypes")
-            argvals = inspect.getcallargs(func, *args, **kwargs)
-            if sorted(argtypes.keys()) != sorted(argvals.keys()):
-                raise E.ArgumentTypeError("Invalid argument specification in %s" % func.__name__)
-            for k in argtypes.keys():
-                try:
-                    argtypes[k].test(argvals[k])
-                except AssertionError as e:
-                    raise E.ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__qualname__))
-        # @requires decorator
-        if U.has_fun_prop(func, "requires"):
-            argvals = inspect.getcallargs(func, *args, **kwargs)
-            # Function named arguments
-            #full_locals = locals().copy()
-            #full_locals.update({k : v for k,v in zip(argspec.args, args)})
-            full_locals = argvals
-            for requirement,requirementtext in U.get_fun_prop(func, "requires"):
+def _check_accepts(func, args, kwargs):
+    # @accepts decorator
+    if U.has_fun_prop(func, "argtypes"):
+        argtypes = U.get_fun_prop(func, "argtypes")
+        argvals = inspect.getcallargs(func, *args, **kwargs)
+        if sorted(argtypes.keys()) != sorted(argvals.keys()):
+            raise E.ArgumentTypeError("Invalid argument specification in %s" % func.__name__)
+        for k in argtypes.keys():
+            try:
+                argtypes[k].test(argvals[k])
+            except AssertionError as e:
+                raise E.ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__qualname__))
+
+def _check_requires(func, args, kwargs):
+    # @requires decorator
+    if U.has_fun_prop(func, "requires"):
+        argvals = inspect.getcallargs(func, *args, **kwargs)
+        # Function named arguments
+        #full_locals = locals().copy()
+        #full_locals.update({k : v for k,v in zip(argspec.args, args)})
+        full_locals = argvals
+        for requirement,requirementtext in U.get_fun_prop(func, "requires"):
+            try:
                 if not eval(requirement, globals(), full_locals):
                     raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_locals)))
-        # Function argument comparison: Allow testing for function
-        # arguments which were modified.  To do so, first save an
-        # extra copy of the testcase.
-        if U.has_fun_prop(func, "immutable_argument"):
-            prev_args = deepcopy(args)
-            prev_kwargs = deepcopy(kwargs)
-        # The actual function
-        returnvalue = func(*args, **kwargs)
-        # @returns decorator
-        if U.has_fun_prop(func, "returntype"):
-            try:
-                U.get_fun_prop(func, "returntype").test(returnvalue)
-            except AssertionError as e:
-                raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__qualname__) )
-        # Function argument comparison: To finish comparing arguments,
-        # test the arguments for equality.  We cannot check for simple
-        # equality because many objects have identity equality
-        # built-in, so testing from a deepcopy is guaranteed to fail,
-        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
-        # property, we try comparing that.  Otherwise, we compare the
-        # value.
-        if U.has_fun_prop(func, "immutable_argument"):
-            for a1,a2 in zip(prev_args,args):
-                if not U.test_equality(a1, a2):
-                    raise E.ObjectModifiedError
-            for k in kwargs.keys():
-                if not U.test_equality(prev_kwargs[k], kwargs[k]):
-                    raise E.ObjectModifiedError
+            except Exception as e:
+                if isinstance(e, E.EntryConditionsError):
+                    raise
+                else:
+                    raise E.EntryConditionsError("Invalid function requirement '%s' in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_locals)))
+
+def _check_returns(func, returnvalue, args, kwargs):
+    # @returns decorator
+    if U.has_fun_prop(func, "returntype"):
+        try:
+            U.get_fun_prop(func, "returntype").test(returnvalue)
+        except AssertionError as e:
+            raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__qualname__) )
+    
+def _check_ensures(func, returnvalue, args, kwargs):
         # @ensures decorator
         if U.has_fun_prop(func, "ensures"):
             argtypes = U.get_fun_prop(func, "argtypes")
@@ -97,6 +86,36 @@ def _wrap(func):
                     if not eval(ensurement, globals(), limited_locals):
                         print("DEBUG INFORMATION:", limited_locals)
                         raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(limited_locals)))
+
+
+def _wrap(func):
+    def _decorated(*args, **kwargs):
+        _check_accepts(func, args, kwargs)
+        _check_requires(func, args, kwargs)
+        # Function argument comparison: Allow testing for function
+        # arguments which were modified.  To do so, first save an
+        # extra copy of the testcase.
+        if U.has_fun_prop(func, "immutable_argument"):
+            prev_args = deepcopy(args)
+            prev_kwargs = deepcopy(kwargs)
+        # The actual function
+        returnvalue = func(*args, **kwargs)
+        # Function argument comparison: To finish comparing arguments,
+        # test the arguments for equality.  We cannot check for simple
+        # equality because many objects have identity equality
+        # built-in, so testing from a deepcopy is guaranteed to fail,
+        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
+        # property, we try comparing that.  Otherwise, we compare the
+        # value.
+        if U.has_fun_prop(func, "immutable_argument"):
+            for a1,a2 in zip(prev_args,args):
+                if not U.test_equality(a1, a2):
+                    raise E.ObjectModifiedError
+            for k in kwargs.keys():
+                if not U.test_equality(prev_kwargs[k], kwargs[k]):
+                    raise E.ObjectModifiedError
+        _check_returns(func, returnvalue, args, kwargs)
+        _check_ensures(func, returnvalue, args, kwargs)
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func

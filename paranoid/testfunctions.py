@@ -75,7 +75,7 @@ def test_function(func):
         kwargs_name = utils.get_func_kwargs_name(func)
         try:
             kws = tc[sorted(args.keys()).index(kwargs_name)] if kwargs_name else {}
-            with max_run_time(.1):
+            with max_run_time(5):
                 func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != kwargs_name},
                      **kws)
                 totaltests += 1

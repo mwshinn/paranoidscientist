@@ -242,9 +242,18 @@ class NDArray(Type):
         if self.d is not None:
             assert len(v.shape) == self.d
         if self.type is not None:
-            for fv in v.flatten():
-                self.type.test(fv), \
-                    "Array value %s is not of type %s" % (fv, repr(self.type))
+            # Optimizing this for numbers, which are used often
+            if type(self.type) is Number:
+                assert np.all(np.isfinite(v))
+            elif type(self.type) is Positive:
+                assert np.all(np.isfinite(v))
+                assert np.all(v > 0)
+            elif type(self.type) is Positive0:
+                assert np.all(np.isfinite(v))
+                assert np.all(v >= 0)
+            else:
+                for fv in v.flatten():
+                    assert fv in self.type, "Array value %s is not of type %s" % (fv, repr(self.type))
     def generate(self):
         # TODO fix, and more of these
         if self.type:

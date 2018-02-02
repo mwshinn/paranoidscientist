@@ -8,3 +8,7 @@ from .base import *
 from .collections import *
 from .numeric import *
 from .string import *
+
+import numpy as __np
+__np.seterr(all="raise")
+__np.seterr(under="ignore")
