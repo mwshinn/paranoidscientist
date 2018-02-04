@@ -3,9 +3,9 @@ Paranoid Scientist
 
 ## What is Paranoid Scientist?
 
-Paranoid Scientist is a Python module which provides allows runtime
-verification for Python programs.  More specifically, it provides the
-following:
+Paranoid Scientist is a Python module which allows runtime
+verification of entry and exit conditions for Python functions.  More
+specifically, it provides the following:
 
 - A strong type system, which emphasizes the *meaning* of the type
   instead of the *data structure* of the type.
@@ -17,7 +17,46 @@ following:
 - A simple and clear function decorator notation
 
 It shares inspiration (but is still quite distinct) from
-contract-based programming, type classes, and automated fuzz testing,
+contract-based programming, type classes, and automated fuzz testing.
+
+## Quick example
+
+Paranoid Scientist is used to programmatically define and verify
+function entry and exit conditions.  Here are some simple examples.
+
+```python
+from paranoid.types import Number, Positive, Natural1, Natural0, Range
+from paranoid.decorators import accepts, returns, requires, ensures, paranoidclass
+
+@accepts(x=Number, y=Number)
+@returns(Positive)
+@requires("x != y")
+def some_formula(x, y):
+    return 1/((x-y)**2)
+
+@accepts(Number)
+@returns(Number)
+@ensures("x >= x` --> return >= return`") # Test for monotonicity
+def cube(x):
+    return x**3
+
+# `flips` must be a natural number, but not 0
+# `p_heads` must be between 0 and 1 inclusive
+@accepts(Natural1, Range(0, 1))
+# Returns a natural number, which may be 0
+@returns(Natural0)
+# We can never have more heads than flips
+@ensures("return <= flips")
+# If we have a zero probability, we get zero heads
+@ensures("p_heads == 0 --> return == 0")
+def biased_coin(flips, p_heads=0.5):
+    """Expected number of heads from biased coin flips.
+    
+    `flips` should be the number of times to flip the coin.
+    `p_heads` should be the probability of getting heads on one flip.
+    """
+    return round(flips * p_heads)
+```
 
 ## What is the point?
 
@@ -37,51 +76,9 @@ words, it is not as important to know before executing the program
 whether it will run correctly, but if the program gives a result, we
 want to know that this result is correct.
 
-## Is Paranoid Scientist "Pythonic"?
-
-Paranoid Scientist is Pythonic in most aspects, but not at all in the
-type system.  Pythonic code relies on duck typing, which is great in
-many situations but is a nightmare for scientific programming.  As an
-example, consider the following:
-
-```python
-M = get_data_as_matrix()
-M_squared = M**2
-print(M_squared.tolist())
-```
-
-What is the result of this computation?  Duck typing tells us that we
-have squared the matrix, and thus everything is okay.  However, if we
-look more closely, the result depends on the matrix type returned by
-`get_data_as_matrix`:
-
-```python
-M = numpy.matrix([[1, 2], [3, 4]])
-M_squared = M**2
-print(M_squared.tolist())
-
-M = numpy.array([[1, 2], [3, 4]])
-M_squared = M**2
-print(M_squared.tolist())
-```
-
-which outputs
-
-```
-[[7, 10], [15, 22]]
-[[1, 4], [9, 16]]
-```
-
-As we can see, the result of this computation depends on whether the
-matrix is a numpy array or a numpy matrix, both of which are common
-datatypes in practice.  The former implement element-wise
-multiplication, while the latter implements matrix multiplication.
-Forgetting to cast an array to a matrix (or vice versa) can introduce
-subtle bugs into your code that could easily go undetected.
-
 ## System requirements
 
-- Python 3.6 or above
+- Python 3.5 or above
 - Optional: Numpy (for Numpy types support)
 
 ## Introduction to Types
@@ -117,6 +114,9 @@ floating point, but it doesn't work for NaN or Inf.  So, we can
 annotate the function as follows:
 
 ```python
+from paranoid.decorators import accepts, returns
+from paranoid.types import Number
+
 @accepts(Number, Number)
 @returns(Number)
 def add(n, m):
@@ -133,6 +133,9 @@ when we flip a coin with a `p_heads` probability of showing heads
 `flips` number of times.
 
 ```python
+from paranoid.decorators import accepts, returns
+from paranoid.types import Natural1, Natural0, Range
+
 @accepts(Natural1, Range(0, 1))
 @returns(Natural0)
 def biased_coin(flips, p_heads):
@@ -144,11 +147,14 @@ The `Natural1` type represents a natural number excluding zero, the
 number within the range.
 
 Additionally, the same syntax can be used in class methods, as long as
-the class is flagged with the `@verifiedclass` decorator.  The special
+the class is flagged with the `@paranoidclass` decorator.  The special
 type `Self` should be used for the `self` arguments in class methods.
 
 ``` python
-@verifiedclass
+from paranoid.decorators import accepts, returns, paranoidclass
+from paranoid.types import Self, Number, Boolean
+
+@paranoidclass
 class Point:
     def __init__(self, x, y):
         self.x = x
@@ -203,7 +209,7 @@ All types should inherit from `paranoid.base.Type`.
 Consider the following simple type:
 
 ```python
-from paranoid.types.base import Type
+from paranoid.types import Type
 
 class BinaryString(Type):
     """A binary number in the form of a string"""
@@ -239,7 +245,7 @@ string of some particular length.  Since these must by definition also
 be binary strings, we can inherit from the BinaryString type.
 
 ```python
-from paranoid.types.numeric import Natural0
+from paranoid.types import Natural0
 
 class FixedLengthBinaryString(BinaryString):
     """A binary number of specified length in the form of a string."""
@@ -284,7 +290,10 @@ Let's look back at our example of the point in 2D space and turn this
 into a type.
 
 ``` python
-@verifiedclass
+from paranoid.decorators import accepts, returns, paranoidclass
+from paranoid.types import Self, Number, Boolean
+
+@paranoidclass
 class Point:
     def __init__(self, x, y):
         self.x = x
@@ -392,6 +401,9 @@ variables.
 Consider for instance the following:
 
 ``` python
+from paranoid.decorators import accepts
+from paranoid.types import Number
+
 @accepts(Number, Number)
 def invert_difference(x, y):
     return 1/(x-y)
@@ -403,6 +415,9 @@ taking into account their values.  Instead, Paranoid Scientist allows
 us to write:
 
 ``` python
+from paranoid.decorators import accepts, requires
+from paranoid.types import Number
+
 @accepts(Number, Number)
 @requires("x != y")
 def invert_difference(x, y):
@@ -413,6 +428,9 @@ It is also possible to use the `requires` decorator to simplify highly
 redundant types.  For example, we could write:
 
 ``` python
+from paranoid.decorators import accepts, requires
+from paranoid.types import Number
+
 @accepts(Number)
 @requires("x != 0")
 def invert(x):
@@ -439,6 +457,9 @@ executes.  Exit conditions use the magic variable "return" to describe
 how the arguments must relate to return values.  For example,
 
 ``` python
+from paranoid.decorators import accepts, returns, ensures
+from paranoid.types import Number, List
+
 @accepts(List(Number))
 @returns(Number)
 @ensures('min(l) < return < max(l)')
@@ -459,6 +480,9 @@ For convenience, exit conditions also allow two new pseudo-operators,
 For example,
 
 ``` python
+from paranoid.decorators import accepts, returns, ensures
+from paranoid.types import Number
+
 @accepts(Number)
 @returns(Number)
 @ensures('return == 0 <--> x == 0')
@@ -482,6 +506,9 @@ Why is this useful?  Now, we can test complex properties like a
 function's monotonicity:
 
 ``` python
+from paranoid.decorators import accepts, returns, ensures
+from paranoid.types import Number
+
 @accepts(Number)
 @returns(Number)
 @ensures("x > x` --> return >= return`")
@@ -494,7 +521,7 @@ def monotonic(x):
 All code is available under the MIT license.  See LICENSE.txt for more
 information.
 
-## FAQs
+## Conceptual FAQs
 
 ### Is Paranoid Scientist only for scientific code?
 
@@ -540,6 +567,140 @@ runtime with a single line of code.  When it is disabled, there is no
 performance loss.  Additionally, the automated unit tests described
 above may still be run when it is disabled at runtime.
 
+### How is Paranoid Scientist different from MyPy?
+
+MyPy is an optional static typing system for Python, and aims to
+answer the question: "If I run this script, will it succeed?"  Thus,
+it is a static analyzer which can find several bugs before they arise
+in production environments.
+
+By contrast, Paranoid Scientist answers the question "If I already ran
+this script, was the result I received correct?"  It does not do
+static analysis, but rather makes the program crash if it detects
+potential problems.
+
+Due to these different goals, the main practical difference is that
+MyPy emphasizes the machine-readable Python type of a variable,
+whereas ParanoidScientist emphasizes the human-understandable type.
+Consider the following example of MyPy, which comes directly from the
+[MyPy website](http://mypy-lang.org/examples.html):
+
+```python
+class BankAccount:
+    def __init__(self, initial_balance: int = 0) -> None:
+        self.balance = initial_balance
+    def deposit(self, amount: int) -> None:
+        self.balance += amount
+    def withdraw(self, amount: int) -> None:
+        self.balance -= amount
+    def overdrawn(self) -> bool:
+        return self.balance < 0
+
+my_account = BankAccount(15)
+my_account.withdraw(5)
+print(my_account.balance)
+```
+
+You can see how this bank account system is convenient because it
+ensures that the amount withdrawn or deposited always is an integer.
+However, what would happen if you ran the following code?
+
+    >>> my_account.deposit(-5)
+
+Using this, you can withdraw money using the deposit function!
+
+By contrast, using Paranoid Scientist on this code block would look
+like the following:
+
+```python
+from paranoid.decorators import accepts, requires, paranoidclass
+from paranoid.types import Natural1, Self
+
+@paranoidclass
+class BankAccount:
+    @staticmethod
+    def _test(v):
+        assert v.balance >= 0
+    @staticmethod
+    def _generate():
+        yield BankAccount(0)
+        yield BankAccount(10)
+    def __init__(self, initial_balance = 0):
+        self.balance = initial_balance
+    @accepts(Self, Natural1)
+    def deposit(self, amount):
+        self.balance += amount
+    @accepts(Self, Natural1)
+    @requires('self.balance >= amount')
+    def withdraw(self, amount):
+        self.balance -= amount
+
+my_account = BankAccount(15)
+my_account.withdraw(5)
+print(my_account.balance)
+```
+
+    >>> my_account.deposit(-5)
+    Traceback (most recent call last):
+        ...
+    paranoid.exceptions.ArgumentTypeError: Invalid argument type: amount=-5 is not of type <paranoid.types.numeric.Natural1 object at 0x7fd1e5bcc7b8> in BankAccount.deposit
+
+Note that this also obviates the need for the "overdrawn" function,
+because it will never allow an operation on a bank account which would
+overdraft.
+
+    >>> my_account.withdraw(1000)
+    Traceback (most recent call last):
+        ...
+    paranoid.exceptions.EntryConditionsError: Function requirement 'self.balance >= amount' failed in BankAccount.withdraw
+
+Nevertheless, MyPy is an excellent library, but it accomplishes
+different goals than Paranoid Scientist.
+
+### Is Paranoid Scientist "Pythonic"?
+
+Paranoid Scientist is Pythonic in most aspects, but not at all in the
+type system.  Pythonic code relies on duck typing, which is great in
+many situations but is a nightmare for scientific programming.  As an
+example, consider the following:
+
+```python
+M = get_data_as_matrix()
+M_squared = M**2
+print(M_squared.tolist())
+```
+
+What is the result of this computation?  Duck typing tells us that we
+have squared the matrix, and thus everything is okay.  However, if we
+look more closely, the result depends on the matrix type returned by
+`get_data_as_matrix`:
+
+```python
+M = numpy.matrix([[1, 2], [3, 4]])
+M_squared = M**2
+print(M_squared.tolist())
+
+M = numpy.array([[1, 2], [3, 4]])
+M_squared = M**2
+print(M_squared.tolist())
+```
+
+which outputs
+
+```
+[[7, 10], [15, 22]]
+[[1, 4], [9, 16]]
+```
+
+As we can see, the result of this computation depends on whether the
+matrix is a numpy array or a numpy matrix, both of which are common
+datatypes in practice.  The former implement element-wise
+multiplication, while the latter implements matrix multiplication.
+Forgetting to cast an array to a matrix (or vice versa) can introduce
+subtle bugs into your code that could easily go undetected.
+
+## Technical FAQs
+
 ### Why are Python lists and numpy 1D arrays different types?
 
 These types behave differently in many common situation which can lead
@@ -553,16 +714,23 @@ def add_lists(a, b):
 Does this concatenate the lists or does it perform element-wise
 addition?  The answer depends on the datatype passed.
 
-### Why are Numpy numbers different types than Python numbers?
+### Why are Numpy numbers and Python numbers the same type?
 
 As you may know, integers and floats in Python are different from
 integers and floats in Numpy.  While both behave similarly in most
-circumstances, Paranoid Scientist treats these as different types.
+circumstances, Paranoid Scientist treats these as the same type.
+Numpy claims that their numeric type system is fully compatible with
+Python's, however there are subtle differences.
 
-First, Numpy claims that their numeric type system is fully compatible
-with Python's, however there are subtle differences, such as a failure
-to pickle in some circumstances.
+The biggest difference for Paranoid Scientist is that Numpy integer
+types can overflow whereas Python types do not.  Paranoid Scientist
+approaches this by forcing numpy to throw an error if there is an
+overflow.
 
-Second, and more importantly, incorporating Numpy features into a core
-module for Paranoid Scientist would introduce an unnecessary
-dependency on Numpy.
+There are some differences which are not addressed by this.  For
+example, there are certain operations are only suppored on one of the
+two types, and certain situations where Numpy types do not pickle
+properly.  If either of these situations arise, it is straightforward
+to define a new type which only supports either Numpy or non-Numpy
+types.  In most situations, it is expected that the default behavior
+will suffice.
