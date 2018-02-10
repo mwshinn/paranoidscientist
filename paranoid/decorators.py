@@ -16,11 +16,10 @@ from . import exceptions as E
 
 RECURSIVE_LIMIT_WHILE_EXEC = 1 # TODO temporary hack to improve performance, will change later.
 
-def _check_accepts(func, args, kwargs):
+def _check_accepts(func, argvals):
     # @accepts decorator
     if U.has_fun_prop(func, "argtypes"):
         argtypes = U.get_fun_prop(func, "argtypes")
-        argvals = inspect.getcallargs(func, *args, **kwargs)
         if sorted(argtypes.keys()) != sorted(argvals.keys()):
             raise E.ArgumentTypeError("Invalid argument specification in %s" % func.__name__)
         for k in argtypes.keys():
@@ -29,14 +28,13 @@ def _check_accepts(func, args, kwargs):
             except AssertionError as e:
                 raise E.ArgumentTypeError("Invalid argument type: %s=%s is not of type %s in %s" % (k, argvals[k], argtypes[k], func.__qualname__))
 
-def _check_requires(func, args, kwargs):
+def _check_requires(func, argvals):
     # @requires decorator
     if U.has_fun_prop(func, "requires"):
-        argvals = inspect.getcallargs(func, *args, **kwargs)
         # Function named arguments
+        full_locals = argvals
         #full_locals = locals().copy()
         #full_locals.update({k : v for k,v in zip(argspec.args, args)})
-        full_locals = argvals
         for requirement,requirementtext in U.get_fun_prop(func, "requires"):
             try:
                 if not eval(requirement, globals(), full_locals):
@@ -47,7 +45,7 @@ def _check_requires(func, args, kwargs):
                 else:
                     raise E.EntryConditionsError("Invalid function requirement '%s' in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_locals)))
 
-def _check_returns(func, returnvalue, args, kwargs):
+def _check_returns(func, returnvalue):
     # @returns decorator
     if U.has_fun_prop(func, "returntype"):
         try:
@@ -55,11 +53,10 @@ def _check_returns(func, returnvalue, args, kwargs):
         except AssertionError as e:
             raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__qualname__) )
     
-def _check_ensures(func, returnvalue, args, kwargs):
+def _check_ensures(func, returnvalue, argvals):
         # @ensures decorator
         if U.has_fun_prop(func, "ensures"):
             argtypes = U.get_fun_prop(func, "argtypes")
-            argvals = inspect.getcallargs(func, *args, **kwargs)
             # Function named arguments
             limited_locals = argvals
             # Return value
@@ -90,8 +87,9 @@ def _check_ensures(func, returnvalue, args, kwargs):
 
 def _wrap(func):
     def _decorated(*args, **kwargs):
-        _check_accepts(func, args, kwargs)
-        _check_requires(func, args, kwargs)
+        argvals = inspect.getcallargs(func, *args, **kwargs)
+        _check_accepts(func, argvals)
+        _check_requires(func, argvals)
         # Function argument comparison: Allow testing for function
         # arguments which were modified.  To do so, first save an
         # extra copy of the testcase.
@@ -114,8 +112,8 @@ def _wrap(func):
             for k in kwargs.keys():
                 if not U.test_equality(prev_kwargs[k], kwargs[k]):
                     raise E.ObjectModifiedError
-        _check_returns(func, returnvalue, args, kwargs)
-        _check_ensures(func, returnvalue, args, kwargs)
+        _check_returns(func, returnvalue)
+        _check_ensures(func, returnvalue, argvals)
         return returnvalue
     if U.has_fun_prop(func, "active"):
         return func

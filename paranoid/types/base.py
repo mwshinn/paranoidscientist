@@ -20,14 +20,14 @@ def TypeFactory(v):
     Users should never access this function directly.
     """
 
-    if issubclass(type(v), Type):
+    if v is None:
+        return Nothing()
+    elif issubclass(type(v), Type):
         return v
     elif issubclass(v, Type):
         return v()
     elif issubclass(type(v), type):
         return Generic(v)
-    elif v is None:
-        return Nothing()
     else:
         raise InvalidTypeError("Invalid type %s" % v)
 
@@ -158,7 +158,7 @@ class And(Type):
         for t in self.types:
             t.test(v)
     def generate(self):
-        all_generated = [e for t in self.types for e in t.generate()]
+        all_generated = [e for t in self.types for e in t.generate() or []]
         valid_generated = []
         for g in all_generated:
             try:
@@ -205,7 +205,10 @@ class Not(Type):
         pass
 
 class PositionalArguments(Type):
-    """Function optional positional arguments."""
+    """Function optional positional arguments.
+
+    This is used internally.
+    """
     def test(self, v):
         super().test(v)
         assert isinstance(v, tuple), "Non-dict passed"
@@ -214,7 +217,10 @@ class PositionalArguments(Type):
 
 
 class KeywordArguments(Type):
-    """Function optional keyword arguments."""
+    """Function optional keyword arguments.
+
+    This is used internally.
+    """
     def test(self, v):
         super().test(v)
         assert isinstance(v, dict), "Non-dict passed"

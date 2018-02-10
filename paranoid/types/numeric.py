@@ -4,7 +4,7 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-__all__ = ['Numeric', 'Number', 'Integer', 'Natural0', 'Natural1', 'Range', 'RangeClosedOpen', 'RangeOpenClosed', 'RangeOpen', 'Positive0', 'Positive', 'NDArray']
+__all__ = ['Numeric', 'ExtendedReal', 'Number', 'Integer', 'Natural0', 'Natural1', 'Range', 'RangeClosedOpen', 'RangeOpenClosed', 'RangeOpen', 'Positive0', 'Positive', 'NDArray']
 import math
 from .base import Type, TypeFactory
 

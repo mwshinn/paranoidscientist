@@ -91,8 +91,10 @@ class ParametersDict(Type):
         for k in v.keys():
             self.params[k].test(v[k])
     def generate(self):
-        yield {}
-        # TODO more appropriate tests here
-        for k in self.params.keys():
-            yield {k : next(self.params[k].generate())}
+        yield {k : next(self.params[k].generate()) for k in self.params.keys()}
+        if self.all_mandatory == False:
+            yield {}
+            # TODO more appropriate tests here
+            for k in self.params.keys():
+                yield {k : next(self.params[k].generate())}
 

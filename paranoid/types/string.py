@@ -26,13 +26,12 @@ class String(Type):
         yield "баклажан" # A UTF-8 string
 
 class Identifier(String):
-    """Any alphanumeric string with underscores and hyphens."""
+    """Any non-empty alphanumeric string with underscores and hyphens."""
     is_ident = re.compile(r'^[A-Za-z0-9_-]+$')
     def test(self, v):
         super().test(v)
         assert self.is_ident.match(v), "Invalid identifier characters"
     def generate(self):
-        yield "" # Empty string
         yield "_" # Empty string
         yield "-" # Empty string
         yield "a" # A short string
@@ -47,26 +46,24 @@ class Identifier(String):
         yield "undescoreend-" # A string ending with an underscore
 
 class Alphanumeric(Identifier):
-    """Any alphanumeric string"""
+    """Any non-empty alphanumeric string"""
     is_alphanum = re.compile(r'^[A-Za-z0-9]+$')
     def test(self, v):
         super().test(v)
         assert self.is_alphanum.match(v), "Invalid alphanumeric characters"
     def generate(self):
-        yield "" # Empty string
         yield "a" # A short string
         yield "a"*1000 # A long string
         yield "abc123" # An alphanumeric string
         yield "2" # A string which can be interpreted as a number
 
 class Latin(Alphanumeric):
-    """Any string with latin characters only"""
+    """Any non-empty string with latin characters only"""
     is_lat = re.compile(r'^[A-Za-z]+$')
     def test(self, v):
         super().test(v)
         assert self.is_lat.match(v), "Invalid latin characters"
     def generate(self):
-        yield "" # Empty string
         yield "a" # A short string
         yield "P" # A capital leter
         yield "tree" # A word
