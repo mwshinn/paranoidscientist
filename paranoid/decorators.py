@@ -4,7 +4,7 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-__all__ = ['accepts', 'requires', 'returns', 'ensures', 'immutable_argument', 'paranoidclass']
+__all__ = ['accepts', 'requires', 'returns', 'ensures', 'paranoidclass']
 import functools
 import inspect
 from copy import deepcopy
@@ -88,33 +88,16 @@ def _check_ensures(func, returnvalue, argvals):
 def _wrap(func):
     def _decorated(*args, **kwargs):
         argvals = inspect.getcallargs(func, *args, **kwargs)
+
         _check_accepts(func, argvals)
         _check_requires(func, argvals)
-        # Function argument comparison: Allow testing for function
-        # arguments which were modified.  To do so, first save an
-        # extra copy of the testcase.
-        if U.has_fun_prop(func, "immutable_argument"):
-            prev_args = deepcopy(args)
-            prev_kwargs = deepcopy(kwargs)
-        # The actual function
+        
         returnvalue = func(*args, **kwargs)
-        # Function argument comparison: To finish comparing arguments,
-        # test the arguments for equality.  We cannot check for simple
-        # equality because many objects have identity equality
-        # built-in, so testing from a deepcopy is guaranteed to fail,
-        # i.e. deepcopy(a) != a.  So, if the argument has a __dict__
-        # property, we try comparing that.  Otherwise, we compare the
-        # value.
-        if U.has_fun_prop(func, "immutable_argument"):
-            for a1,a2 in zip(prev_args,args):
-                if not U.test_equality(a1, a2):
-                    raise E.ObjectModifiedError
-            for k in kwargs.keys():
-                if not U.test_equality(prev_kwargs[k], kwargs[k]):
-                    raise E.ObjectModifiedError
+        
         _check_returns(func, returnvalue)
         _check_ensures(func, returnvalue, argvals)
         return returnvalue
+    
     if U.has_fun_prop(func, "active"):
         return func
     else:
@@ -209,10 +192,6 @@ def ensures(condition):
             U.set_fun_prop(func, "ensures", [(False, compiled, condition)]+ensures_statements)
         return _wrap(func)
     return _decorator
-
-def immutable_argument(func):
-    U.set_fun_prop(func, "immutable_argument", True)
-    return _wrap(func)
 
 
 def paranoidclass(cls):

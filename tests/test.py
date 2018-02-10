@@ -148,26 +148,6 @@ add(7, 3)
 test_function(add)
 
 
-@accepts(MyType)
-@returns(Nothing)
-@ensures("1==1")
-@immutable_argument
-def dontmod_mytype(mt):
-    dummy = 3
-
-dontmod_mytype(MyType(10))
-
-@accepts(MyType)
-@returns(Nothing)
-@ensures("1==1")
-@immutable_argument
-def mod_mytype(mt):
-    mt.val = 3
-
-
-
-mod_mytype(MyType(3))
-fails(lambda : mod_mytype(MyType(1)))
 
 @accepts(Identifier, Alphanumeric, Latin)
 def test_strings(s1, s2, s3):

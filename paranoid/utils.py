@@ -59,18 +59,6 @@ def set_fun_prop(f, k, v):
         raise InternalError("Invalid properties dictionary for %s" % str(f))
     getattr(f, _FUN_PROPS)[k] = v
 
-# TODO this will fail for cyclical objects
-def test_equality(a1, a2):
-    if not hasattr(a1, "__dict__"):
-        return a1 == a2
-    if a1.__dict__ != a2.__dict__:
-        if sorted(a1.__dict__.keys()) != sorted(a2.__dict__.keys()):
-            return False
-        for k in a1.__dict__.keys():
-            if not test_equality(a1.__dict__[k], a2.__dict__[k]):
-                return False
-    return True
-    
 def get_func_posargs_name(f):
     """Returns the name of the function f's keyword argument parameter if it exists, otherwise None"""
     sigparams = inspect.signature(f).parameters
