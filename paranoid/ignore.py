@@ -4,29 +4,9 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-from . import decorators
+from .settings import Settings
 
-def accepts(*argtypes, **kwargtypes):
-    return lambda f: f
+print("Warning, this module is depreciated.  " \
+      "Use Settings.set(enabled=False) instead."
 
-def returns(returntype):
-    return lambda f: f
-            
-def requires(condition):
-    return lambda f: f
-
-def ensures(condition):
-    return lambda f: f
-
-def immutable_argument(func):
-    return func
-
-def paranoidclass(cls):
-    return cls
-
-decorators.accepts = accepts
-decorators.returns = returns
-decorators.requires = requires
-decorators.ensures = ensures
-decorators.immutable_argument = immutable_argument
-decorators.paranoidclass = paranoidclass
+Settings.set(enabled=False)

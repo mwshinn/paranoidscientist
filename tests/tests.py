@@ -4,6 +4,7 @@ from paranoid.testfunctions import test_function
 import paranoid.decorators as pd
 import paranoid.types as pt
 import paranoid.utils as pu
+from paranoid.settings import Settings
 from string import ascii_letters
 
 def fails(f):
@@ -228,7 +229,53 @@ class TestDecorators(TestCase):
         assert sumlist([2, 4, 6]) == 12
         fails(lambda x : sumlist([2, 3, 4]))
         fails(lambda x : sumlist([3, 2, 1, 0]))
-        
+
+class TestSettings(TestCase):
+    def test_set_setting(self):
+        # "enabled" is boolean
+        prevval = Settings.get("enabled")
+        Settings._set("enabled", not prevval)
+        assert Settings.get("enabled") == (not prevval)
+        Settings._set("enabled", prevval)
+    def test_no_invalid_value(self):
+        fails(lambda x : Settings._set("enabled", 3))
+        fails(lambda x : Settings._set("max_cache", 3.1))
+        fails(lambda x : Settings._set("max_runtime", True))
+    def test_set_setting_consistent(self):
+        import paranoid.settings as ps1
+        import paranoid.settings as ps2
+        from paranoid.settings import Settings as ps3
+        prevval = ps1.Settings.get("max_cache")
+        ps1.Settings._set("max_cache", 1234)
+        assert ps2.Settings.get("max_cache") == 1234
+        assert ps3.get("max_cache") == 1234
+        ps1.Settings._set("max_cache", prevval)
+    def test_function_local_override(self):
+        f1 = lambda x : x
+        prevval = Settings.get("max_cache")
+        Settings._set("max_cache", 1234)
+        assert Settings.get("max_cache", function=f1) == 1234
+        Settings._set("max_cache", 2345, function=f1)
+        assert Settings.get("max_cache", function=f1) == 2345
+        Settings._set("max_cache", prevval)
+    def test_syntactic_sugar_set(self):
+        prevval = Settings.get("enabled")
+        Settings.set(enabled=False)
+        assert Settings.get("enabled") == False
+        Settings.set(enabled=True)
+        assert Settings.get("enabled") == True
+        Settings._set("enabled", prevval)
+    def test_disable_paranoid(self):
+        @pd.accepts(pt.Boolean)
+        @pd.returns(pt.Boolean)
+        def not_boolean(x):
+            return int(x + 3)
+        prevval = Settings.get("enabled")
+        Settings.set(enabled=False)
+        not_boolean(5)
+        Settings.set(enabled=True)
+        fails(lambda : not_boolean(5))
+        Settings._set("enabled", prevval)
 
 if __name__ == '__main__':
     main()

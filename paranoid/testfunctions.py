@@ -10,6 +10,7 @@ import signal
 from contextlib import contextmanager
 from . import utils
 from .exceptions import NoGeneratorError, EntryConditionsError, TestCaseTimeoutError
+from .settings import Settings
 
 @contextmanager
 def max_run_time(t):
@@ -75,7 +76,7 @@ def test_function(func):
         kwargs_name = utils.get_func_kwargs_name(func)
         try:
             kws = tc[sorted(args.keys()).index(kwargs_name)] if kwargs_name else {}
-            with max_run_time(5):
+            with max_run_time(Settings.get("max_runtime", function=func)):
                 func(**{k : v for k,v in zip(sorted(args.keys()),tc) if k != kwargs_name},
                      **kws)
                 totaltests += 1

@@ -13,8 +13,8 @@ from .types import base as T
 from .types.collections import Dict, List
 from .types.string import String
 from . import exceptions as E
+from .settings import Settings
 
-RECURSIVE_LIMIT_WHILE_EXEC = 2 # TODO temporary hack to improve performance, will change later.
 
 def _check_accepts(func, argvals):
     # @accepts decorator
@@ -67,7 +67,7 @@ def _check_ensures(func, returnvalue, argvals):
                     exec_cache = []
                     U.set_fun_prop(func, "exec_cache", exec_cache)
                 exec_cache.append(limited_globals.copy())
-                if len(exec_cache) > RECURSIVE_LIMIT_WHILE_EXEC:
+                if len(exec_cache) > Settings.get("max_cache", function=func):
                     exec_cache.pop(0) # TODO Hack for now, change this mechanism
             for hasbt, ensurement, etext in U.get_fun_prop(func, "ensures"):
                 _bt = "__BACKTICK__"
@@ -84,13 +84,18 @@ def _check_ensures(func, returnvalue, argvals):
 
 def _wrap(func):
     def _decorated(*args, **kwargs):
+        # Skip verification if paranoid is disabled.
+        if Settings.get("enabled") == False:
+            return func(*args, **kwargs)
+        # We only run this function once for performance reasons, and
+        # then pass it as an argument to each check function.
         argvals = inspect.getcallargs(func, *args, **kwargs)
 
+        # Check entry conditions, run the function, check exit
+        # conditions, and return the result of the function.
         _check_accepts(func, argvals)
         _check_requires(func, argvals)
-        
         returnvalue = func(*args, **kwargs)
-        
         _check_returns(func, returnvalue)
         _check_ensures(func, returnvalue, argvals)
         return returnvalue
@@ -99,8 +104,14 @@ def _wrap(func):
         return func
     else:
         U.set_fun_prop(func, "active", True)
-        assign = functools.WRAPPER_ASSIGNMENTS + (U._FUN_PROPS,)
+        assign = functools.WRAPPER_ASSIGNMENTS + \
+                 (U._FUN_PROPS,Settings.FUNCTION_SETTINGS_NAME)
         wrapped = functools.wraps(func, assigned=assign)(_decorated)
+        # A list of all functions for when Paranoid Scientist is
+        # invoked with "python3 -m paranoid scriptname.py".  If the
+        # name "__ALL_FUNCTIONS" is not defined, then we assume
+        # paranoid was not called in this way.  If it is defined, we
+        # add this function to the list.
         if "__ALL_FUNCTIONS" in globals().keys():
             __ALL_FUNCTIONS.append(wrapped)
         return wrapped
