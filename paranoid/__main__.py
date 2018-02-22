@@ -27,15 +27,19 @@ from .testfunctions import test_function
 # verification.
 if __name__ == "__main__":
     # Pass exactly one argement: the python file to check
-    if len(sys.argv) != 2: # len == 2 because the path to the module is arg 1.
-        exit("Invalid argument, please pass a python file")
+    # len == 2 if the path to the module is arg 1.
+    if not (len(sys.argv) == 2 or (len(sys.argv) == 3 and sys.argv[1] == "-m")):
+        exit("Invalid argument, please pass a python file or '-m modulename'")
     # Add the __ALL_FUNCTIONS to the global scope of the verify module
     # and then run the script.  Save the global variables from script
     # execution so that we can find the __ALL_FUNCTIONS variable once
     # the script has finished executing.
     globs = {} # Global variables from script execution
     # Get the script file's text
-    script_contents = open(sys.argv[1], "r").read()
+    if len(sys.argv) == 3:
+        script_contents = "import %s\n" % sys.argv[2]
+    elif len(sys.argv) == 2:
+        script_contents = open(sys.argv[1], "r").read()
     # Include the paranoid code in a predictable way
     prefix = "import paranoid as __paranoidmod;__paranoidmod.decorators.__ALL_FUNCTIONS = [];"
     # Get rid of relative imports
