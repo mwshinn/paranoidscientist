@@ -13,7 +13,7 @@
 # module level in order to prevent a "import *" statement from causing
 # problems.
 class Settings:
-    FUNCTION_SETTINGS_NAME = "_function_settings"
+    FUNCTION_SETTINGS_NAME = "__function_settings__"
     # Default values for settings.  Each variable which can be set
     # either locally or globally must be listed here with a default
     # value.
@@ -75,6 +75,17 @@ class Settings:
         if function:
             if not hasattr(function, Settings.FUNCTION_SETTINGS_NAME):
                 setattr(function, Settings.FUNCTION_SETTINGS_NAME, {})
+                # Test if this wraps something.  TODO this will fail
+                # for nested decorators.  This also assumes that, if
+                # there is a wrapped function (super wraps sub), that
+                # if super doesn't have settings, then sup doesn't
+                # either.  (This assumption is valid for paranoid
+                # decorators since it properly uses update_wrapper,
+                # but may not be valid for other decorators.)
+                if hasattr(function, "__wrapped__"):
+                    setattr(function.__wrapped__,
+                            Settings.FUNCTION_SETTINGS_NAME,
+                            getattr(function, Settings.FUNCTION_SETTINGS_NAME))
             getattr(function, Settings.FUNCTION_SETTINGS_NAME)[name] = value
         else:
             Settings.__global_setting_values[name] = value

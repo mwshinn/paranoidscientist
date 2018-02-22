@@ -4,7 +4,7 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-__all__ = ['accepts', 'requires', 'returns', 'ensures', 'paranoidclass']
+__all__ = ['accepts', 'requires', 'returns', 'ensures', 'paranoidclass', 'paranoidconfig']
 import functools
 import inspect
 from copy import deepcopy
@@ -85,7 +85,7 @@ def _check_ensures(func, returnvalue, argvals):
 def _wrap(func):
     def _decorated(*args, **kwargs):
         # Skip verification if paranoid is disabled.
-        if Settings.get("enabled") == False:
+        if Settings.get("enabled", function=func) == False:
             return func(*args, **kwargs)
         # We only run this function once for performance reasons, and
         # then pass it as an argument to each check function.
@@ -105,7 +105,7 @@ def _wrap(func):
     else:
         U.set_fun_prop(func, "active", True)
         assign = functools.WRAPPER_ASSIGNMENTS + \
-                 (U._FUN_PROPS,Settings.FUNCTION_SETTINGS_NAME)
+                 (U._FUN_PROPS, Settings.FUNCTION_SETTINGS_NAME)
         wrapped = functools.wraps(func, assigned=assign)(_decorated)
         # A list of all functions for when Paranoid Scientist is
         # invoked with "python3 -m paranoid scriptname.py".  If the
@@ -214,3 +214,10 @@ def paranoidclass(cls):
             if isinstance(U.get_fun_prop(meth, "returntype"), T.Self):
                 U.set_fun_prop(meth, "returntype", T.Generic(cls))
     return cls
+
+def paranoidconfig(**kwargs):
+    def _decorator(func):
+        for k,v in kwargs.items():
+            Settings._set(k, v, function=func)
+        return func
+    return _wrap(_decorator)

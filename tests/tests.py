@@ -163,7 +163,7 @@ class TestUtils(TestCase):
     def test_function_properties(self):
         testfunc = lambda x : x
         assert not pu.has_fun_prop(testfunc, "pname")
-        fails(lambda x : pu.get_fun_prop(testfunc, "pname"))
+        fails(lambda : pu.get_fun_prop(testfunc, "pname"))
         pu.set_fun_prop(testfunc, "pname", "testval")
         assert pu.has_fun_prop(testfunc, "pname")
         assert pu.get_fun_prop(testfunc, "pname") == "testval"
@@ -227,8 +227,47 @@ class TestDecorators(TestCase):
         def sumlist(l):
             return sum(l)
         assert sumlist([2, 4, 6]) == 12
-        fails(lambda x : sumlist([2, 3, 4]))
-        fails(lambda x : sumlist([3, 2, 1, 0]))
+        fails(lambda : sumlist([2, 3, 4]))
+        fails(lambda : sumlist([3, 2, 1, 0]))
+    def test_paranoidconfig(self):
+        @pd.paranoidconfig(enabled=False)
+        @pd.accepts(pt.Boolean)
+        @pd.returns(pt.Boolean)
+        def not_boolean(x):
+            return int(x + 3)
+        not_boolean(5)
+        # Flip the order so paranoidconfig is run first
+        @pd.accepts(pt.Boolean)
+        @pd.returns(pt.Boolean)
+        @pd.paranoidconfig(enabled=False)
+        def not_boolean(x):
+            return int(x + 3)
+        not_boolean(5)
+        # Now make sure we can enable it again too
+        @pd.paranoidconfig(enabled=True)
+        @pd.accepts(pt.Boolean)
+        @pd.returns(pt.Boolean)
+        def not_boolean_fail(x):
+            return int(x + 3)
+        fails(lambda : not_boolean_fail(5))
+    def test_with_other_decorator(self):
+        # Other decorator first
+        from functools import lru_cache
+        @lru_cache(maxsize=32)
+        @pd.ensures("return > y")
+        def simple(x, y):
+            return x
+        assert simple(5, 3) == 5
+        fails(lambda : simple(5, 6))
+        # Other decorator second
+        # TODO this should work in theory but lru_cache doesn't copy properly
+        # @pd.ensures("return > y")
+        # @lru_cache(maxsize=32)
+        # def simple(x, y):
+        #     return x
+        # assert simple(5, 3) == 5
+        # fails(lambda : simple(5, 6))
+        
 
 class TestSettings(TestCase):
     def test_set_setting(self):
@@ -238,9 +277,9 @@ class TestSettings(TestCase):
         assert Settings.get("enabled") == (not prevval)
         Settings._set("enabled", prevval)
     def test_no_invalid_value(self):
-        fails(lambda x : Settings._set("enabled", 3))
-        fails(lambda x : Settings._set("max_cache", 3.1))
-        fails(lambda x : Settings._set("max_runtime", True))
+        fails(lambda : Settings._set("enabled", 3))
+        fails(lambda : Settings._set("max_cache", 3.1))
+        fails(lambda : Settings._set("max_runtime", True))
     def test_set_setting_consistent(self):
         import paranoid.settings as ps1
         import paranoid.settings as ps2
