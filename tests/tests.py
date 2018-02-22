@@ -1,6 +1,6 @@
 import unittest
 from unittest import TestCase, main
-from paranoid.testfunctions import test_function
+from paranoid.testfunctions import test_function as function_test
 import paranoid.decorators as pd
 import paranoid.types as pt
 import paranoid.utils as pu
@@ -16,26 +16,26 @@ def fails(f):
     if failed == False:
         raise ValueError("Error, function did not fail")
 
-def test_identity(typ):
+def identity_test(typ):
     @pd.accepts(typ)
     @pd.returns(typ)
     def f(x):
         return x
-    # test_function returns the number of tests performed, so make
+    # function_test returns the number of tests performed, so make
     # sure that we did at least one.
-    assert test_function(f) > 0
+    assert function_test(f) > 0
 
-def test_pair(acc, ret):
+def pair_test(acc, ret):
     @pd.accepts(acc)
     @pd.returns(ret)
     def f(x):
         return x
-    # test_function returns the number of tests performed, so make
+    # function_test returns the number of tests performed, so make
     # sure that we did at least one.
-    assert test_function(f) > 0
+    assert function_test(f) > 0
 
 def pair_fails(acc, ret):
-    fails(lambda acc=acc,ret=ret : test_pair(acc, ret))
+    fails(lambda acc=acc,ret=ret : pair_test(acc, ret))
 
 class TestTypes(TestCase):
     def setUp(self):
@@ -50,20 +50,22 @@ class TestTypes(TestCase):
     
     def test_numeric_types(self):
         for t in self.numeric_types:
-            test_identity(t)
+            identity_test(t)
         # Test some more ranges
-        test_identity(pt.Range(-1, 1))
-        test_identity(pt.Range(0, 10))
-        test_identity(pt.Range(-.2, 3.1415))
-        test_identity(pt.RangeClosedOpen(-1, 1))
-        test_identity(pt.RangeClosedOpen(0, 10))
-        test_identity(pt.RangeClosedOpen(-.2, 3.1415))
-        test_identity(pt.RangeOpenClosed(-1, 1))
-        test_identity(pt.RangeOpenClosed(0, 10))
-        test_identity(pt.RangeOpenClosed(-.2, 3.1415))
-        test_identity(pt.RangeOpen(-1, 1))
-        test_identity(pt.RangeOpen(0, 10))
-        test_identity(pt.RangeOpen(-.2, 3.1415))
+        identity_test(pt.Range(-1, 1))
+        identity_test(pt.Range(0, 10))
+        identity_test(pt.Range(-.2, 3.1415))
+        identity_test(pt.RangeClosedOpen(-1, 1))
+        identity_test(pt.RangeClosedOpen(0, 10))
+        identity_test(pt.RangeClosedOpen(-.2, 3.1415))
+        identity_test(pt.RangeOpenClosed(-1, 1))
+        identity_test(pt.RangeOpenClosed(0, 10))
+        identity_test(pt.RangeOpenClosed(-.2, 3.1415))
+        identity_test(pt.RangeOpen(-1, 1))
+        identity_test(pt.RangeOpen(0, 10))
+        identity_test(pt.RangeOpen(-.2, 3.1415))
+
+        pair_test(pt.Natural1, pt.Natural0)
 
         pair_fails(pt.Numeric, pt.ExtendedReal)
         pair_fails(pt.Numeric, pt.Number)
@@ -83,11 +85,11 @@ class TestTypes(TestCase):
         dims = [1, 2, 3, None]
         for t in typs:
             for d in dims:
-                test_identity(pt.NDArray(d=d, t=t))
+                identity_test(pt.NDArray(d=d, t=t))
     
     def test_string_types(self):
         for t in self.string_types:
-            test_identity(t)
+            identity_test(t)
 
         pair_fails(pt.String, pt.Identifier)
         pair_fails(pt.Identifier, pt.Alphanumeric)
@@ -96,29 +98,36 @@ class TestTypes(TestCase):
     def test_collection_types(self):
         alltypes = self.string_types + self.numeric_types
         for t in alltypes:
-            test_identity(pt.List(t))
-            test_identity(pt.Dict(k=pt.String, v=t))
-            test_identity(pt.Dict(k=pt.Number, v=t))
-        test_identity(pt.Set(["a", "b", "c"]))
-        test_identity(pt.Set([1.3, "abc", -1]))
-        test_identity(pt.ParametersDict({}))
-        test_identity(pt.ParametersDict({k : v for (k,v) in
+            identity_test(pt.List(t))
+            identity_test(pt.Dict(k=pt.String, v=t))
+            identity_test(pt.Dict(k=pt.Number, v=t))
+        identity_test(pt.Set(["a", "b", "c"]))
+        identity_test(pt.Set([1.3, "abc", -1]))
+        identity_test(pt.ParametersDict({}))
+        identity_test(pt.ParametersDict({k : v for (k,v) in
                                          zip(ascii_letters, alltypes)}))
 
     def test_TypeFactory(self):
-        test_pair(pt.TypeFactory(pt.Integer), pt.TypeFactory(pt.Integer()))
-        test_pair(None, pt.Nothing)
+        pair_test(pt.TypeFactory(pt.Integer), pt.TypeFactory(pt.Integer()))
+        pair_test(None, pt.Nothing)
         assert 3 in pt.TypeFactory(int)
     
     def test_Constant(self):
         for c in [{}, [], "xyz", 123.45, True]:
-            test_identity(pt.Constant(c))
+            identity_test(pt.Constant(c))
 
     def test_Unchecked(self):
         alltypes = self.string_types + self.numeric_types
         for t1 in alltypes:
             for t2 in alltypes:
-                test_pair(pt.Unchecked(t1), pt.Unchecked(t2))
+                pair_test(pt.Unchecked(t1), pt.Unchecked(t2))
+            pair_test(pt.Unchecked(t1), pt.Unchecked)
+        @pd.accepts(pt.Unchecked)
+        @pd.returns(pt.Unchecked(t1))
+        def f(x):
+            return x
+        assert function_test(f) == 0
+        
 
     def test_Nothing(self):
         alltypes = self.string_types + self.numeric_types
@@ -127,17 +136,17 @@ class TestTypes(TestCase):
             pair_fails(pt.Nothing, t)
 
     def test_Boolean(self):
-        test_identity(pt.Boolean)
+        identity_test(pt.Boolean)
         pair_fails(123, pt.Boolean)
 
     def test_Function(self):
         assert (lambda x : x) in pt.Function()
         
     def test_And_Or_Not(self):
-        test_identity(pt.And(pt.Natural0, pt.Range(0, 10)))
-        test_identity(pt.Or(pt.Boolean, pt.Range(0, 10)))
-        test_identity(pt.And(pt.Range(0, 10), pt.Not(pt.Range(3, 5))))
-        test_identity(pt.And(pt.Range(0, 10), pt.Not(pt.Range(0, 5))))
+        identity_test(pt.And(pt.Natural0, pt.Range(0, 10)))
+        identity_test(pt.Or(pt.Boolean, pt.Range(0, 10)))
+        identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(3, 5))))
+        identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(0, 5))))
     
     def test_class_type(self):
         @pd.paranoidclass
@@ -152,12 +161,13 @@ class TestTypes(TestCase):
             def _test(v):
                 v.val in pt.Integer()
             @pd.accepts(pt.Self)
+            @pd.returns(pt.Self)
             def get_val(self):
-                return self.val
-        test_identity(MyClass)
-        test_identity(pt.Generic(MyClass))
-        assert test_function(MyClass.get_val) > 0
-        test_pair(pt.TypeFactory(MyClass), pt.Generic(MyClass))
+                return self
+        identity_test(MyClass)
+        identity_test(pt.Generic(MyClass))
+        assert function_test(MyClass.get_val) > 0
+        pair_test(pt.TypeFactory(MyClass), pt.Generic(MyClass))
 
 class TestUtils(TestCase):
     def test_function_properties(self):
@@ -181,12 +191,14 @@ class TestUtils(TestCase):
 class TestDecorators(TestCase):
     def test_requires(self):
         @pd.requires("x > y")
+        @pd.requires("x >= y")
         def simple(x, y):
             return 0
         assert simple(5, 3) == 0
         fails(lambda : simple(5, 5))
     def test_ensures(self):
         @pd.ensures("return > y")
+        @pd.ensures("1 == 1")
         def simple(x, y):
             return x
         assert simple(5, 3) == 5
@@ -229,6 +241,12 @@ class TestDecorators(TestCase):
         assert sumlist([2, 4, 6]) == 12
         fails(lambda : sumlist([2, 3, 4]))
         fails(lambda : sumlist([3, 2, 1, 0]))
+    def test_kwarg_only(self): # TODO
+        @pd.accepts(x=pt.Integer, y=pt.Number)
+        def simple(**kwargs):
+            return kwargs['x'] + kwargs['y']
+        assert simple(x=5, y=3) == 8
+        fails(lambda : simple(3, 5))
     def test_paranoidconfig(self):
         @pd.paranoidconfig(enabled=False)
         @pd.accepts(pt.Boolean)
