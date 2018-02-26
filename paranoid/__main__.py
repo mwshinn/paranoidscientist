@@ -38,8 +38,10 @@ if __name__ == "__main__":
     # Get the script file's text
     if len(sys.argv) == 3:
         script_contents = "import %s\n" % sys.argv[2]
+        name = sys.argv[2]
     elif len(sys.argv) == 2:
         script_contents = open(sys.argv[1], "r").read()
+        name = sys.argv[1]
     # Include the paranoid code in a predictable way
     prefix = "import paranoid as __paranoidmod;__paranoidmod.decorators.__ALL_FUNCTIONS = [];"
     # Get rid of relative imports
@@ -49,6 +51,7 @@ if __name__ == "__main__":
     exec(prefix + script_contents, globs)
     all_functions = globs["__paranoidmod"].decorators.__ALL_FUNCTIONS
     # Test each function from the script.
+    untested = []
     for f in all_functions:
         # Some function executions might take a while, so we print to
         # the screen when we begin testing a function, and then erase
@@ -62,5 +65,8 @@ if __name__ == "__main__":
         # longer than the string to signal function f has been tested,
         # so this avoids leaving extra characters on the terminal.
         print("\b"*len(start_text)+"    Tested %i values for %s    " % (ntests, f.__name__), flush=True)
-    print("Tested %i functions in %s." % (len(all_functions), sys.argv[1]))
-
+        if ntests == 0:
+            untested.append(f.__name__)
+    print("Tested %i functions in %s." % (len(all_functions), name))
+    if untested:
+        print("WARNING: The following functions were untested: %s" % ", ".join(untested))

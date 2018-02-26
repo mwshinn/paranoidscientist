@@ -107,3 +107,11 @@ class MyClass:
     def testfun2(self, x, **kwargs):
         return self.val + x
 
+import time
+
+@accepts(Number)
+@returns(Number)
+@paranoidconfig(max_runtime=1)
+def long_running(a):
+    time.sleep(5)
+    return a

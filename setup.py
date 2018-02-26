@@ -4,18 +4,28 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
-    name = 'ParanoidScientist',
-    version = '1.0',
+    name = 'paranoid-scientist',
+    version = '0.1.0',
     description = 'Runtime verification and automated testing for scientific code',
     author = 'Max Shinn',
     author_email = 'maxwell.shinn@yale.edu',
+    url = 'https://github.com/mwshinn/paranoidscientist',
     maintainer = 'Max Shinn',
     license = 'MIT',
+    python_requires='>=3',
     maintainer_email = 'maxwell.shinn@yale.edu',
     packages = ['paranoid', 'paranoid.types'],
-    #py_modules = ['paranoid', 'paranoid.exceptions', 'paranoid.decorators', 'paranoid.types', 'paranoid.utils', 'paranoid.types.base', 'paranoid.types.collections', 'paranoid.types.numeric', 'paranoid.types.string'],
-    #requires = ['numpy']
+    classifiers = [
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Topic :: Education :: Testing',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Software Development :: Quality Assurance',
+        'Topic :: Software Development :: Testing']
 )

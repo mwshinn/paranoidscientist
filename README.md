@@ -657,6 +657,15 @@ overdraft.
 Nevertheless, MyPy is an excellent library, but it accomplishes
 different goals than Paranoid Scientist.
 
+### How does Paranoid Scientist differ from using contracts (e.g. PyContracts)?
+
+- Contracts do not allow the comparison of previous executions of a
+  function.  Therefore, you cannot reason about higher level
+  properties of a function, such as monotonicity or concavity.
+- Contracts cannot perform automated testing.
+- PyContracts does not allow parameterized contracts other than the
+  defaults.
+
 ### Is Paranoid Scientist "Pythonic"?
 
 Paranoid Scientist is Pythonic in most aspects, but not at all in the
@@ -701,6 +710,24 @@ subtle bugs into your code that could easily go undetected.
 
 ## Technical FAQs
 
+### How do I use Paranoid Scientist in my code?
+
+At the top of each source file, include the line
+
+```python
+import paranoid as pns
+```
+
+in each source file.  Then, to access functions types, simply refer to
+them as `pns.Range(0,1)` or `@pns.accepts(pns.Number)`.  Optionally,
+you may want to include
+
+```python
+from paranoid import accepts, returns, requires, ensures, paranoidclass, paranoidconfig
+```
+
+for easy access to the function decorators.
+
 ### Why are Python lists and numpy 1D arrays different types?
 
 These types behave differently in many common situation which can lead
@@ -734,3 +761,51 @@ properly.  If either of these situations arise, it is straightforward
 to define a new type which only supports either Numpy or non-Numpy
 types.  In most situations, it is expected that the default behavior
 will suffice.
+
+### What types are included by default?
+
+- Numeric types:
+    - Numeric: Any real number, plus inf/-inf/nan.
+    - ExtendedReal: Any real number plus inf/-inf.
+    - Number: Any real number.
+    - Integer: An integer.
+    - Natural0: A natural number including 0.
+    - Natural1: A natural number starting with 1.
+    - Range(x,y): A number in the interval [x,y].
+    - RangeClosedOpen(x,y): A number in the interval [x,y).
+    - RangeOpenClosed(x,y): A number in the interval (x,y].
+    - RangeOpen(x,y): A number in the range (x,y).
+    - Positive0: A positive number or zero.
+    - Positive: A positive number excluding zero.
+    - NDArray(d=None, t=None): A Numpy NDArray.  Optionally, require
+      it to have `d` dimensions.  Optionally, require elements of the
+      array to be of type `t` (which can be any Paranoid type).
+- Other:
+    - Unchecked(t=None): Do not check the type for this element.
+      Optionally, a Paranoid type `t` can be passed as a type to
+      generate during automated testing (to allow testing of functions
+      of unchecked type).
+    - Constant(v): Can only be the value `v`.
+    - Self: A special type to use inside classes for the `self` argument.
+    - Nothing: Can only be None.
+    - Function: Any Python function.
+    - Boolean: Either True or False.
+    - And(t1, t2, ...): Any number of Paranoid types may be passed as
+      arguments.  Require a value to satisfy all of these types.
+    - Or(t1, t2, ...): Any number of Paranoid types may be passed as
+      arguments.  Require a value to satisfy at least one of these
+      types.
+    - Not(t): Can be anything other than the Paranoid type `t`.
+- Collections:
+    - Set(els): The argument `els` should be a list of accepted
+      values.  This is equivalent to an enum.  For example,
+      Set([0, 1, 2, 3]) accepts only these four numbers.
+    - List(t): A Python list with elements of Paranoid type `t`
+    - Dict(k, v): A Python dictionary where keys have Paranoid type
+      `k` and values have Paranoid type `v`.
+- Strings:
+    - String: Any string.
+    - Identifier: Any non-empty string containing only alpha-numeric
+      characters plus underscores and hyphens.
+    - Alphanumeric: Any non-empty alphanumeric string.
+    - Latin: Any non-empty string with Latin characters only.

@@ -219,5 +219,5 @@ def paranoidconfig(**kwargs):
     def _decorator(func):
         for k,v in kwargs.items():
             Settings._set(k, v, function=func)
-        return func
-    return _wrap(_decorator)
+        return _wrap(func)
+    return _decorator
