@@ -32,18 +32,19 @@ def _check_requires(func, argvals):
     # @requires decorator
     if U.has_fun_prop(func, "requires"):
         # Function named arguments
-        full_globals = argvals
+        full_globals = Settings.get("namespace").copy()
+        full_globals.update(argvals)
         #full_locals = locals().copy()
         #full_locals.update({k : v for k,v in zip(argspec.args, args)})
         for requirement,requirementtext in U.get_fun_prop(func, "requires"):
             try:
                 if not eval(requirement, full_globals, {}):
-                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_globals)))
+                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(argvals)))
             except Exception as e:
                 if isinstance(e, E.EntryConditionsError):
                     raise
                 else:
-                    raise E.EntryConditionsError("Invalid function requirement '%s' in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(full_globals)))
+                    raise E.EntryConditionsError("Invalid function requirement '%s' in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(argvals)))
 
 def _check_returns(func, returnvalue):
     # @returns decorator
@@ -57,7 +58,8 @@ def _check_ensures(func, returnvalue, argvals):
         # @ensures decorator
         if U.has_fun_prop(func, "ensures"):
             # Function named arguments
-            limited_globals = argvals
+            limited_globals = Settings.get("namespace").copy()
+            limited_globals.update(argvals)
             # Return value
             limited_globals['__RETURN__'] = returnvalue
             if any(hasbt for hasbt,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
@@ -76,10 +78,10 @@ def _check_ensures(func, returnvalue, argvals):
                     for cache_item in exec_cache:
                         limited_globals.update({k+_bt : v for k,v in cache_item.items()})
                         if not eval(ensurement, limited_globals, {}):
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str({k:v for k,v in limited_globals.items()}).replace(_bt, "`")))
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
                 else:
                     if not eval(ensurement, limited_globals, {}):
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(limited_globals)))
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(dict(**{"return": returnvalue}, **argvals))))
 
 
 def _wrap(func):

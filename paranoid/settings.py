@@ -25,14 +25,16 @@ class Settings:
     __global_setting_values = {
         'enabled' : True,
         'max_runtime': 2,
-        'max_cache' : 2}
+        'max_cache' : 2,
+        'namespace' : {}}
     # Validity functions.  Each variable listed above has an
     # associated validation function.  While not strictly required,
     # these validation functions ensure that the settings are valid.
     __validate_settings = {
         'enabled' : lambda x : x in [True, False],
         'max_runtime' : lambda x : type(x) in [int, float] and x >= 0,
-        'max_cache' : lambda x : isinstance(x, int) and x >= 0 }
+        'max_cache' : lambda x : isinstance(x, int) and x >= 0,
+        'namespace' : lambda x : isinstance(x, dict) and all(isinstance(k, str) for k in x.keys())}
     def __init__(self):
         """Do not try to instantiate this."""
         raise TypeError("Do not instantiate the settings module")

@@ -8,14 +8,14 @@ from setuptools import setup
 
 setup(
     name = 'paranoid-scientist',
-    version = '0.1.0',
+    version = '0.1.1',
     description = 'Runtime verification and automated testing for scientific code',
     author = 'Max Shinn',
     author_email = 'maxwell.shinn@yale.edu',
     url = 'https://github.com/mwshinn/paranoidscientist',
     maintainer = 'Max Shinn',
     license = 'MIT',
-    python_requires='>=3',
+    python_requires='>=3.5',
     maintainer_email = 'maxwell.shinn@yale.edu',
     packages = ['paranoid', 'paranoid.types'],
     classifiers = [
