@@ -17,7 +17,7 @@ def max_run_time(t):
     """Limit the runtime of a code segment.
 
     If a block of code runs for more than `t` seconds, kill it.  This
-    only works on *nix platforms; on Windows, there will be no time
+    only works on unix platforms; on Windows, there will be no time
     limit.
     
     Use within a with statement, e.g.

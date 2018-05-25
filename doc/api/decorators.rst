@@ -1,5 +1,5 @@
 Decorators
-----------
+==========
 
 .. automodule:: paranoid.decorators
    :members:

@@ -49,3 +49,17 @@ properly.  If either of these situations arise, it is straightforward
 to define a new type which only supports either Numpy or non-Numpy
 types.  In most situations, it is expected that the default behavior
 will suffice.
+
+Why don't NDArrays or lists have an optional length parameter?
+--------------------------------------------------------------
+
+A very paradigm is to require that a list (array) argument has the
+same length (shape) as another argument or as the return value.
+However, types must be independent of each other, and so such a
+dependency is not possible.  These must be checked in an `ensures`
+statement rather than within the type itself.
+
+While there are certainly use cases for lists and arrays of a
+particular fixed length, to avoid confusion with this common use case
+and reduce the complexity of NDArray specifications, these must be
+checked in `ensures` statments as well.

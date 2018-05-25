@@ -190,6 +190,7 @@ class TestUtils(TestCase):
 
 class TestDecorators(TestCase):
     def test_requires(self):
+        """Test the requires decorator"""
         @pd.requires("x > y")
         @pd.requires("x >= y")
         def simple(x, y):
@@ -197,6 +198,7 @@ class TestDecorators(TestCase):
         assert simple(5, 3) == 0
         fails(lambda : simple(5, 5))
     def test_ensures(self):
+        """Test the ensures decorator"""
         @pd.ensures("return > y")
         @pd.ensures("1 == 1")
         def simple(x, y):
@@ -204,6 +206,7 @@ class TestDecorators(TestCase):
         assert simple(5, 3) == 5
         fails(lambda : simple(5, 6))
     def test_ensures_implies(self):
+        """Test implies --> notation"""
         @pd.ensures("y == 3 --> return == 1")
         def simple(x, y):
             return x
@@ -212,6 +215,7 @@ class TestDecorators(TestCase):
         assert simple(4, 2) == 4
         fails(lambda : simple(7, 3))
     def test_ensures_iff(self):
+        """Test if and only if <--> notation"""
         @pd.ensures("y == 3 <--> return == 1")
         def simple(x, y):
             return x
@@ -220,6 +224,7 @@ class TestDecorators(TestCase):
         assert simple(4, 2) == 4
         fails(lambda : simple(7, 3))
     def test_ensures_backtick(self):
+        """Test backtick notation for universal quantifier"""
         @pd.ensures("x > x` --> return > return`")
         def invert1(x):
             return -x
@@ -232,6 +237,7 @@ class TestDecorators(TestCase):
         # invert2(3)
         # fails(lambda : invert2(2))
     def test_ensures_iter(self):
+        """Make sure iterators work in requires/ensures conditions"""
         # There were formerly problems with iterators in conditions,
         # so this makes sure they won't pop up again.
         @pd.requires("all(x % 2 == 0 for x in l)")
@@ -248,6 +254,7 @@ class TestDecorators(TestCase):
         assert simple(x=5, y=3) == 8
         fails(lambda : simple(3, 5))
     def test_paranoidconfig(self):
+        """Setting and reading config options"""
         @pd.paranoidconfig(enabled=False)
         @pd.accepts(pt.Boolean)
         @pd.returns(pt.Boolean)
@@ -269,6 +276,7 @@ class TestDecorators(TestCase):
             return int(x + 3)
         fails(lambda : not_boolean_fail(5))
     def test_with_other_decorator(self):
+        """Compatibility of paranoid with other 3rd party decorators"""
         # Other decorator first
         from functools import lru_cache
         @lru_cache(maxsize=32)
@@ -289,16 +297,19 @@ class TestDecorators(TestCase):
 
 class TestSettings(TestCase):
     def test_set_setting(self):
+        """Assign a value to a setting"""
         # "enabled" is boolean
         prevval = Settings.get("enabled")
         Settings._set("enabled", not prevval)
         assert Settings.get("enabled") == (not prevval)
         Settings._set("enabled", prevval)
     def test_no_invalid_value(self):
+        """Validation of settings values"""
         fails(lambda : Settings._set("enabled", 3))
         fails(lambda : Settings._set("max_cache", 3.1))
         fails(lambda : Settings._set("max_runtime", True))
     def test_set_setting_consistent(self):
+        """Settings consistent when imported under different names"""
         import paranoid.settings as ps1
         import paranoid.settings as ps2
         from paranoid.settings import Settings as ps3
@@ -308,6 +319,7 @@ class TestSettings(TestCase):
         assert ps3.get("max_cache") == 1234
         ps1.Settings._set("max_cache", prevval)
     def test_function_local_override(self):
+        """Functions can locally override global settings"""
         f1 = lambda x : x
         prevval = Settings.get("max_cache")
         Settings._set("max_cache", 1234)
@@ -316,6 +328,7 @@ class TestSettings(TestCase):
         assert Settings.get("max_cache", function=f1) == 2345
         Settings._set("max_cache", prevval)
     def test_syntactic_sugar_set(self):
+        """The nice interface to change settings is working"""
         prevval = Settings.get("enabled")
         Settings.set(enabled=False)
         assert Settings.get("enabled") == False
@@ -323,6 +336,7 @@ class TestSettings(TestCase):
         assert Settings.get("enabled") == True
         Settings._set("enabled", prevval)
     def test_disable_paranoid(self):
+        """Make sure we can disable paranoid scientist"""
         @pd.accepts(pt.Boolean)
         @pd.returns(pt.Boolean)
         def not_boolean(x):
@@ -333,6 +347,15 @@ class TestSettings(TestCase):
         Settings.set(enabled=True)
         fails(lambda : not_boolean(5))
         Settings._set("enabled", prevval)
+    def test_scoping_of_namespace(self):
+        """Names in 'namespace' setting overridden by same-name argument"""
+        Settings.get("namespace").update({"theval" : 3})
+        @pd.accepts(theval=pt.Integer)
+        @pd.ensures("theval != 3")
+        def func(theval):
+            pass
+        func(2)
+        fails(lambda : func(3))
 
 if __name__ == '__main__':
     main()
