@@ -62,7 +62,7 @@ def _check_ensures(func, returnvalue, argvals):
             limited_globals.update(argvals)
             # Return value
             limited_globals['__RETURN__'] = returnvalue
-            if any(hasbt for hasbt,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
+            if any(btdepth>0 for btdepth,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
                 if U.has_fun_prop(func, "exec_cache"):
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                 else:
@@ -71,12 +71,63 @@ def _check_ensures(func, returnvalue, argvals):
                 exec_cache.append(limited_globals.copy())
                 if len(exec_cache) > Settings.get("max_cache", function=func):
                     exec_cache.pop(0) # TODO Hack for now, change this mechanism
-            for hasbt, ensurement, etext in U.get_fun_prop(func, "ensures"):
+            for btdepth, ensurement, etext in U.get_fun_prop(func, "ensures"):
+                # Here we check the higher order properties, e.g. x,
+                # x`, and x``. There is a lot of repeated and opaque
+                # code here, but I've tried to write it in the
+                # cleanest way possible.
                 _bt = "__BACKTICK__"
-                if hasbt:
+                _dbt = "__DOUBLEBACKTICK__"
+                print(btdepth)
+                if btdepth == 2:
                     exec_cache = U.get_fun_prop(func, "exec_cache")
+                    # For some variable var, replace var` and var``
+                    # with elements from the cache.  var will already
+                    # be set to the present argument value.
+                    for i,cache_item in enumerate(exec_cache):
+                        limited_globals.update({k+_bt : v for k,v in cache_item.items()})
+                        for j,cache_item2 in enumerate(exec_cache):
+                            if i == j: continue
+                            limited_globals.update({k+_dbt : v for k,v in cache_item2.items()})
+                            if not eval(ensurement, limited_globals, {}):
+                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
+                    # Now the next way around: set var` to be the
+                    # present argument value and var and var`` to be
+                    # from the cache.
+                    limited_globals.update({k+_bt : v for k,v in argvals.items()})
+                    for i,cache_item in enumerate(exec_cache):
+                        limited_globals.update({k : v for k,v in cache_item.items()})
+                        for j,cache_item2 in enumerate(exec_cache):
+                            if i == j: continue
+                            limited_globals.update({k+_dbt : v for k,v in cache_item2.items()})
+                            if not eval(ensurement, limited_globals, {}):
+                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
+                    # Finally, the last arrangement: set var`` to be
+                    # the present argument and var and var` to be from
+                    # the cache.
+                    limited_globals.update({k+_dbt : v for k,v in argvals.items()})
+                    for i,cache_item in enumerate(exec_cache):
+                        limited_globals.update({k : v for k,v in cache_item.items()})
+                        for j,cache_item2 in enumerate(exec_cache):
+                            if i == j: continue
+                            limited_globals.update({k+_bt : v for k,v in cache_item2.items()})
+                            if not eval(ensurement, limited_globals, {}):
+                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
+                elif btdepth == 1:
+                    exec_cache = U.get_fun_prop(func, "exec_cache")
+                    # For some variable var, replace var` with an
+                    # element from the cache.  var will already be set
+                    # to the present argument value.
                     for cache_item in exec_cache:
                         limited_globals.update({k+_bt : v for k,v in cache_item.items()})
+                        if not eval(ensurement, limited_globals, {}):
+                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
+                    # Now the other way around: set var` to be the
+                    # present argument value and var to be from the
+                    # cache.
+                    limited_globals.update({k+_bt : v for k,v in argvals.items()})
+                    for cache_item in exec_cache:
+                        limited_globals.update({k : v for k,v in cache_item.items()})
                         if not eval(ensurement, limited_globals, {}):
                             raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
                 else:
@@ -182,7 +233,7 @@ def requires(condition):
         return _wrap(func)
     return _decorator
 
-# Adds the "requires" property: list of (hasbacktick, compiledcondition, conditiontext)
+# Adds the "requires" property: list of (backtickdepth, compiledcondition, conditiontext)
 def ensures(condition):
     def _decorator(func, condition=condition):
     # @ensures decorator
@@ -202,14 +253,20 @@ def ensures(condition):
             e_parts = e.split("-->")
             assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__qualname__)
             e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
-        if "`" in e:
-            _bt = "__BACKTICK__"
+        _bt = "__BACKTICK__"
+        _dbt = "__DOUBLEBACKTICK__"
+        if "``" in e:
+            e = e.replace("``", _dbt)
             e = e.replace("`", _bt)
             compiled = compile(e, '', 'eval')
-            U.set_fun_prop(func, "ensures", [(True, compiled, condition)]+ensures_statements)
+            U.set_fun_prop(func, "ensures", [(2, compiled, condition)]+ensures_statements)
+        elif "`" in e:
+            e = e.replace("`", _bt)
+            compiled = compile(e, '', 'eval')
+            U.set_fun_prop(func, "ensures", [(1, compiled, condition)]+ensures_statements)
         else:
             compiled = compile(e, '', 'eval')
-            U.set_fun_prop(func, "ensures", [(False, compiled, condition)]+ensures_statements)
+            U.set_fun_prop(func, "ensures", [(0, compiled, condition)]+ensures_statements)
         return _wrap(func)
     return _decorator
 

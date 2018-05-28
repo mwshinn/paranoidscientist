@@ -230,12 +230,22 @@ class TestDecorators(TestCase):
             return -x
         invert1(3)
         fails(lambda : invert1(4))
-        # # TODO in theory I suppose this should work.
-        # @pd.ensures("x > x` --> return > return`")
-        # def invert2(x):
-        #     return -x
-        # invert2(3)
-        # fails(lambda : invert2(2))
+        # Now the other way around
+        @pd.ensures("x > x` --> return > return`")
+        def invert2(x):
+            return -x
+        invert2(3)
+        fails(lambda : invert2(2))
+    def test_ensures_double_backtick(self):
+        """Test double backtick notation for universal quantifier"""
+        # Transitivity-like example
+        @pd.ensures("x > x` and x` > x`` --> return > return``")
+        @pd.paranoidconfig(max_cache=10)
+        def quasitrans(x):
+            return x if x != 3 else -3
+        quasitrans(1)
+        quasitrans(0)
+        fails(lambda : quasitrans(3))
     def test_ensures_iter(self):
         """Make sure iterators work in requires/ensures conditions"""
         # There were formerly problems with iterators in conditions,
