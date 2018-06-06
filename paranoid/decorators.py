@@ -78,7 +78,6 @@ def _check_ensures(func, returnvalue, argvals):
                 # cleanest way possible.
                 _bt = "__BACKTICK__"
                 _dbt = "__DOUBLEBACKTICK__"
-                print(btdepth)
                 if btdepth == 2:
                     exec_cache = U.get_fun_prop(func, "exec_cache")
                     # For some variable var, replace var` and var``
