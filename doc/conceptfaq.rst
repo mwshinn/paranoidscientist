@@ -27,11 +27,12 @@ So if I just want to reduce the number of bugs in my code, Paranoid Scientist is
 Paranoid Scientist may also be used as a development tool.  Keeping it
 enabled at runtime probably not the best choice for user-facing
 software, but it can still be useful to catch bugs early by, e.g.,
-using it only as a contract-oriented programming library for Python.
-However, there are better tools for this job.
+using only the contract-oriented programming features.
 
 Also, just to state this explicitly, do **not** use the
 automatically-generated test cases as a replacement for unit tests.
+All code should be thoroughly tested.  While Paranoid Scientist can
+help and is much better than nothing, it is not by itself sufficient.
 
 Is Paranoid Scientist fast?
 ---------------------------
@@ -46,7 +47,7 @@ with many arguments.
 However, Paranoid Scientist can easily be enabled or disabled at
 runtime with a single line of code.  When it is disabled, there is no
 performance loss.  Additionally, the automated unit tests described
-above may still be run when it is disabled at runtime.
+above may still be run when runtime checkind is disabled.
 
 How is Paranoid Scientist different from MyPy?
 ----------------------------------------------
@@ -83,9 +84,8 @@ Consider the following example of MyPy, which comes directly from the
 
 You can see how this bank account system is convenient because it
 ensures that the amount withdrawn or deposited always is an integer.
-However, what would happen if you ran the following code?
+However, what would happen if you ran the following code::
 
-::
   >>> my_account.deposit(-5)
 
 Using this, you can withdraw money using the deposit function!
@@ -141,18 +141,36 @@ different goals than Paranoid Scientist.
 How does Paranoid Scientist differ from using contracts (e.g. PyContracts)?
 ---------------------------------------------------------------------------
 
-- Contracts do not allow the comparison of previous executions of a
-  function.  Therefore, you cannot reason about higher level
-  properties of a function, such as monotonicity or concavity.
-- Contracts cannot perform automated testing.
-- PyContracts does not allow parameterized contracts other than the
-  defaults.
+Contracts in theory implement several of the same features but are
+conceptually distinct:
+
+- Paranoid Scientist emphasizes the type of each function argument
+  whereas contracts do not
+- Paranoid Scientist only defines the entry and exit conditions,
+  whereas contracts often define other features of functions such as
+  exceptions that may be raised
+- Paranoid Scientist is most concerned with humans being able to
+  understand the entry and exit conditions at a glance, whereas
+  contracts do not.
+
+These properties give Paranoid Scientist a few unique features which
+are either awkward or impossible with contracts:
+
+- Unlike contracts, Paranoid Scientist allows comparison of function
+  arguments with previous executions of a function.  Therefore, you
+  can reason about higher level properties of a function, such as
+  monotonicity or concavity.
+- Paranoid Scientist can perform automated testing, whereas contracts
+  cannot
 
 Is Paranoid Scientist "Pythonic"?
 ---------------------------------
 
-Paranoid Scientist is Pythonic in most aspects, but not at all in the
-type system.  Pythonic code relies on duck typing, which is great in
+While the concept of types are generally considered non-Pythonic,
+Paranoid Scientist's types can be thought of as the duck typed type
+system.
+
+In general, Pythonic code relies on duck typing, which is great in
 many situations but is a nightmare for scientific programming.  As an
 example, consider the following::
 
@@ -161,9 +179,9 @@ example, consider the following::
   print(M_squared.tolist())
 
 What is the result of this computation?  Duck typing tells us that we
-have squared the matrix, and thus everything is okay.  However, if we
-look more closely, the result depends on the matrix type returned by
-`get_data_as_matrix`::
+have squared the matrix, but this does not necessarily tell us which
+computation was performed. If we look more closely, the result depends
+on the matrix type returned by `get_data_as_matrix`::
 
   M = numpy.matrix([[1, 2], [3, 4]])
   M_squared = M**2
@@ -184,3 +202,9 @@ datatypes in practice.  The former implement element-wise
 multiplication, while the latter implements matrix multiplication.
 Forgetting to cast an array to a matrix (or vice versa) can introduce
 subtle bugs into your code that could easily go undetected.
+
+By contrast, the type system in Paranoid Scientist only mandates that
+types act like some specific concept which is undestandable to humans
+in particular situations.  For example, if it looks like a Number and
+quacks like a Number, then it doesn't matter whether the underlying
+datatype is a float or an int.

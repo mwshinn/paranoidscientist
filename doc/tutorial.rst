@@ -296,7 +296,13 @@ annotations, and generate a number of test cases for each function to
 ensure that the function doesn't fail, and ensure that it satisfies
 the "returns"/"ensures" exit conditions.
 
-This should **not** be used as a replacement for unit tests.
+To test an entire package rather than a single file, use the `-m`
+switch::
+
+    $ python3 -m paranoid -m mymodule
+
+This should **not** be used as a replacement for unit tests, though it
+is useful to complement them.
 
 Entry conditions
 ----------------

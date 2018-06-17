@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name = 'paranoid-scientist',
-    version = '0.1.1',
+    version = '0.1.2',
     description = 'Runtime verification and automated testing for scientific code',
     author = 'Max Shinn',
     author_email = 'maxwell.shinn@yale.edu',

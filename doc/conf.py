@@ -24,9 +24,9 @@ copyright = '2018, Max Shinn'
 author = 'Max Shinn'
 
 # The short X.Y version
-version = ''
+version = '0.1'
 # The full version, including alpha/beta/rc tags
-release = '1.0'
+release = '0.1.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
+    'sphinx.ext.autosectionlabel',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

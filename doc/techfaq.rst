@@ -63,3 +63,15 @@ While there are certainly use cases for lists and arrays of a
 particular fixed length, to avoid confusion with this common use case
 and reduce the complexity of NDArray specifications, these must be
 checked in `ensures` statments as well.
+
+I can think of a counter-example where Paranoid Scientist would fail!
+---------------------------------------------------------------------
+
+That's not a question.  And so can we.  An easy example is subclassing
+int and redefining `__add__` or `__radd__`.  However, if you are
+subclassing int, you clearly know what you are doing and should know
+that this will cause many things to fail in general.
+
+If you come across an example in production code where Paranoid
+Scientist's type system becomes misleading, if the example is
+relatively common, please report this as a bug.
