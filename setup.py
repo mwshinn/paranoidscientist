@@ -6,9 +6,11 @@
 
 from setuptools import setup
 
+from paranoid._version import __version__
+
 setup(
     name = 'paranoid-scientist',
-    version = '0.1.2',
+    version = __version__,
     description = 'Runtime verification and automated testing for scientific code',
     author = 'Max Shinn',
     author_email = 'maxwell.shinn@yale.edu',

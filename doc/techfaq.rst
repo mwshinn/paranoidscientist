@@ -75,3 +75,12 @@ that this will cause many things to fail in general.
 If you come across an example in production code where Paranoid
 Scientist's type system becomes misleading, if the example is
 relatively common, please report this as a bug.
+
+Why didn't you use Python's built-in type syntax?
+-------------------------------------------------
+
+In Python's built-in type syntax, it is not possible to check for
+entry and exit conditions which depend on more than one function
+argument.  In order to support this, decorator notation would need to
+be used as well.  In order to maintain consistency, everything uses
+decorator notation.

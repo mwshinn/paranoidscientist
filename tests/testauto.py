@@ -111,7 +111,7 @@ import time
 
 @accepts(Number)
 @returns(Number)
-@paranoidconfig(max_runtime=1)
+@paranoidconfig(max_runtime=.1)
 def long_running(a):
     time.sleep(5)
     return a

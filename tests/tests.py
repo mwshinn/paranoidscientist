@@ -169,6 +169,30 @@ class TestTypes(TestCase):
         assert function_test(MyClass.get_val) > 0
         pair_test(pt.TypeFactory(MyClass), pt.Generic(MyClass))
 
+    def test_class_type_inheritance(self):
+        """Test whether inherited methods properly resolve Self"""
+        @pd.paranoidclass
+        class MyClass:
+            @pd.accepts(pt.Self)
+            def f(self):
+                pass
+        @pd.paranoidclass
+        class MyClassSub1(MyClass):
+            @pd.accepts(pt.Self)
+            def g(self):
+                pass
+        class MyClassSub2(MyClass):
+            def g(self):
+                pass
+        #myclass = MyClass()
+        #myclass.f()
+        myclass_sub1 = MyClassSub1()
+        myclass_sub1.f()
+        myclass_sub1.g()
+        myclass_sub2 = MyClassSub2()
+        myclass_sub2.f()
+        myclass_sub2.g()
+        
 class TestUtils(TestCase):
     def test_function_properties(self):
         testfunc = lambda x : x
