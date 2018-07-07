@@ -1,3 +1,16 @@
+# Copyright 2018 Max Shinn <max@maxshinnpotential.com>
+# 
+# This file is part of Paranoid Scientist, and is available under the
+# MIT license.  Please see LICENSE.txt in the root directory for more
+# information.
+
+"""Unit tests for Paranoid Scientist.
+
+Call using:
+
+  $ python3 -m pytest tests.py
+"""
+
 import unittest
 from unittest import TestCase, main
 from paranoid.testfunctions import test_function as function_test
@@ -49,6 +62,7 @@ class TestTypes(TestCase):
                              pt.Alphanumeric, pt.Latin]
     
     def test_numeric_types(self):
+        """Types in the numeric module"""
         for t in self.numeric_types:
             identity_test(t)
         # Test some more ranges
@@ -81,6 +95,7 @@ class TestTypes(TestCase):
         pair_fails(pt.Range(0, 1), pt.Range(1, 2))
         
     def test_ndarray(self):
+        """Numpy types"""
         typs = self.numeric_types + [None]
         dims = [1, 2, 3, None]
         for t in typs:
@@ -88,6 +103,7 @@ class TestTypes(TestCase):
                 identity_test(pt.NDArray(d=d, t=t))
     
     def test_string_types(self):
+        """Types in the strings module"""
         for t in self.string_types:
             identity_test(t)
 
@@ -96,6 +112,7 @@ class TestTypes(TestCase):
         pair_fails(pt.Alphanumeric, pt.Latin)
             
     def test_collection_types(self):
+        """Types in the collections module"""
         alltypes = self.string_types + self.numeric_types
         for t in alltypes:
             identity_test(pt.List(t))
@@ -108,15 +125,18 @@ class TestTypes(TestCase):
                                          zip(ascii_letters, alltypes)}))
 
     def test_TypeFactory(self):
+        """Safely returning types using TypeFactory"""
         pair_test(pt.TypeFactory(pt.Integer), pt.TypeFactory(pt.Integer()))
         pair_test(None, pt.Nothing)
         assert 3 in pt.TypeFactory(int)
     
     def test_Constant(self):
+        """Constants"""
         for c in [{}, [], "xyz", 123.45, True]:
             identity_test(pt.Constant(c))
 
     def test_Unchecked(self):
+        """Unchecked function arguments"""
         alltypes = self.string_types + self.numeric_types
         for t1 in alltypes:
             for t2 in alltypes:
@@ -130,25 +150,30 @@ class TestTypes(TestCase):
         
 
     def test_Nothing(self):
+        """Nothing type"""
         alltypes = self.string_types + self.numeric_types
         for t in alltypes:
             pair_fails(t, pt.Nothing)
             pair_fails(pt.Nothing, t)
 
     def test_Boolean(self):
+        """Boolean type"""
         identity_test(pt.Boolean)
         pair_fails(123, pt.Boolean)
 
     def test_Function(self):
+        """Function type"""
         assert (lambda x : x) in pt.Function()
         
     def test_And_Or_Not(self):
+        """And, Or, and Not types"""
         identity_test(pt.And(pt.Natural0, pt.Range(0, 10)))
         identity_test(pt.Or(pt.Boolean, pt.Range(0, 10)))
         identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(3, 5))))
         identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(0, 5))))
     
     def test_class_type(self):
+        """The Self variable and defining types from classes"""
         @pd.paranoidclass
         class MyClass:
             def __init__(self, val):
@@ -195,6 +220,7 @@ class TestTypes(TestCase):
         
 class TestUtils(TestCase):
     def test_function_properties(self):
+        """System for reading and writing function properties"""
         testfunc = lambda x : x
         assert not pu.has_fun_prop(testfunc, "pname")
         fails(lambda : pu.get_fun_prop(testfunc, "pname"))
@@ -203,6 +229,7 @@ class TestUtils(TestCase):
         assert pu.get_fun_prop(testfunc, "pname") == "testval"
 
     def test_poskwarg_names(self):
+        """Names of positional and keyword args"""
         def testfunc(a, b, *ars, **kwars):
             pass
         def testfunc2(a, b, c):
@@ -281,7 +308,8 @@ class TestDecorators(TestCase):
         assert sumlist([2, 4, 6]) == 12
         fails(lambda : sumlist([2, 3, 4]))
         fails(lambda : sumlist([3, 2, 1, 0]))
-    def test_kwarg_only(self): # TODO
+    def test_kwarg_only(self):
+        """Test calling with keyword args only"""
         @pd.accepts(x=pt.Integer, y=pt.Number)
         def simple(**kwargs):
             return kwargs['x'] + kwargs['y']

@@ -23,10 +23,12 @@ project = 'Paranoid Scientist'
 copyright = '2018, Max Shinn'
 author = 'Max Shinn'
 
+exec(open("../paranoid/_version.py", "r").read()) # get __version__ variable
+
 # The short X.Y version
-version = '0.1'
+version = ".".join(__version__.split(".")[0:-1])
 # The full version, including alpha/beta/rc tags
-release = '0.1.2'
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------

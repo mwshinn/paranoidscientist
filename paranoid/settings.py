@@ -4,15 +4,29 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-# A settings manager for Paranoid Scientist.  This manages settings at
-# a global level.
+"""A settings manager for Paranoid Scientist.  This manages settings
+at a global level.
 
-# We use a class here as a singleton.  Rather than a "true" Java-style
-# singleton, this is just a class which cannot be instantiated, and
-# thus has a single state.  We use this instead of something at the
-# module level in order to prevent a "import *" statement from causing
-# problems.
+We use a class here as a singleton.  Rather than a "true" Java-style
+singleton, this is just a class which cannot be instantiated, and thus
+has a single state.  We use this instead of something at the module
+level in order to prevent a "import *" statement from causing
+problems.
+"""
 class Settings:
+    """A settings manager for Paranoid Scientist
+
+    Settings can be set either globally or locally.  To change a
+    setting globally, call Settings.set().  To change a setting
+    locally (on a per-function basis) using a decorator.  For this,
+    please refer to the paranoidconfig decorator in decorators.py.
+
+    Settings can be viewed with Settings.get().
+
+    Note that this "class" is a singleton namespace with exclusively
+    static methods.  It should not be instantiated.
+    """
+
     FUNCTION_SETTINGS_NAME = "__function_settings__"
     # Default values for settings.  Each variable which can be set
     # either locally or globally must be listed here with a default

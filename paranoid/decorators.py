@@ -4,6 +4,8 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
+"""Function (and class) decorators which constitute the primary Paranoid Scientist interface"""
+
 __all__ = ['accepts', 'requires', 'returns', 'ensures', 'paranoidclass', 'paranoidconfig']
 import functools
 import inspect
@@ -169,6 +171,19 @@ def _wrap(func):
         return wrapped
 
 def accepts(*argtypes, **kwargtypes):
+    """A function decorator to specify argument types of the function.
+
+    Types may be specified either in the order that they appear in the
+    function or via keyword arguments (just as if you were calling the
+    function).
+
+    Example usage:
+
+      | @accepts(Positive0)
+      | def square_root(x):
+      |     ...
+    """
+
     theseargtypes = [T.TypeFactory(a) for a in argtypes]
     thesekwargtypes = {k : T.TypeFactory(a) for k,a in kwargtypes.items()}
     def _decorator(func):
@@ -199,6 +214,15 @@ def accepts(*argtypes, **kwargtypes):
     return _decorator
 
 def returns(returntype):
+    """A function decorator to specify return type of the function.
+
+    Example usage:
+
+      | @accepts(Positive0)
+      | @returns(Positive0)
+      | def square_root(x):
+      |     ...
+    """
     returntype = T.TypeFactory(returntype)
     def _decorator(func):
         # @returns decorator
@@ -210,6 +234,31 @@ def returns(returntype):
 
 # Adds the "requires" property: list of (compiledcondition, conditiontext)
 def requires(condition):
+    """A function decorator to specify entry conditions for the function.
+
+    Entry conditions should be a string, which will be evaluated as
+    Python code.  Arguments of the function may be accessed by their
+    name.
+
+    The special syntax "-->" and "<-->" may be used to mean "if" and
+    "if and only if", respectively.  They may not be contained within
+    sub-expressions.
+
+    Note that globals will not be included by default, and must be
+    manually included using the "namespace" setting, set via
+    settings.Settings.
+
+    Example usage:
+
+      | @requires("x >= y")
+      | def subtract(x, y):
+      |     ...
+
+      | @accepts(l=List(Number), log_transform=Boolean)
+      | @requires("log_transform == True --> min(l) > 0")
+      | def process_list(l, log_transform=False):
+      |     ...
+    """
     def _decorator(func, condition=condition):
         # @requires decorator
         if U.has_fun_prop(func, "requires"):
@@ -234,6 +283,35 @@ def requires(condition):
 
 # Adds the "requires" property: list of (backtickdepth, compiledcondition, conditiontext)
 def ensures(condition):
+    """A function decorator to specify exit conditions for the function.
+
+    Exit conditions should be a string, which will be evaluated as
+    Python code.  Arguments of the function may be accessed by their
+    name.  The return value of the function may be accessed using the
+    special variable name "return".
+
+    The special syntax "-->" and "<-->" may be used to mean "if" and
+    "if and only if", respectively.  They may not be contained within
+    sub-expressions.
+
+    Values may be compared to previous executions of the function by
+    including a "`" or "``" after them to check for higher order
+    properties of the function.
+
+    Note that globals will not be included by default, and must be
+    manually included using the "namespace" setting, set via
+    settings.Settings.
+
+    Example usage:
+
+      | @ensures("lower_bound <= return <= upper_bound")
+      | def search(lower_bound, upper_bound):
+      |     ...
+
+      | @ensures("x <= x` --> return <= return`")
+      | def monotonic(x):
+      |     ...
+    """
     def _decorator(func, condition=condition):
     # @ensures decorator
         if U.has_fun_prop(func, "ensures"):
@@ -271,6 +349,18 @@ def ensures(condition):
 
 
 def paranoidclass(cls):
+    """A class decorator to specify that class methods contain paranoid decorators.
+
+    Example usage:
+
+      | @paranoidclass
+      | class Point:
+      |     def __init__(self, x, y):
+      |         ...
+      |     @returns(Number)
+      |     def distance_from_zero():
+      |         ...
+    """
     for methname in dir(cls):
         meth = getattr(cls, methname)
         if U.has_fun_prop(meth, "argtypes"):
@@ -284,6 +374,21 @@ def paranoidclass(cls):
     return cls
 
 def paranoidconfig(**kwargs):
+    """A function decorator to set a local setting.
+
+    Settings may be set either globally (using
+    settings.Settings.set()) or locally using this decorator.  The
+    setting name should be passed as a keyword argument, and the value
+    to assign the setting should be passed as the value.  See
+    settings.Settings for the different settings which can be set.
+
+    Example usage:
+    
+      | @returns(Number)
+      | @paranoidconfig(enabled=False)
+      | def slow_function():
+      |     ...
+    """
     def _decorator(func):
         for k,v in kwargs.items():
             Settings._set(k, v, function=func)

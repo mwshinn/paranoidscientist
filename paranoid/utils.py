@@ -7,7 +7,7 @@
 from .exceptions import InternalError
 import inspect
 
-_FUN_PROPS = "__verify__"
+_FUN_PROPS = "__verify__" # Name of dict used internally to store function properties
 
 def has_fun_prop(f, k):
     """Test whether function `f` has property `k`.

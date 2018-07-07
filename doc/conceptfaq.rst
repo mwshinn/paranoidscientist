@@ -41,24 +41,40 @@ No.  Depending on which options you enable, which features you use,
 and how your code is written, your code will run 10%--1000% slower.
 The biggest culprits for slow runtime in Paranoid Scientist are
 verification conditions involving more than one variable
-(e.g. `return\`\``), asserting arguments are immutable, and functions
-with many arguments.
+(e.g. ``return```) and functions with many arguments.
 
 However, Paranoid Scientist can easily be enabled or disabled at
 runtime with a single line of code.  When it is disabled, there is no
 performance loss.  Additionally, the automated unit tests described
-above may still be run when runtime checkind is disabled.
+above may still be run when runtime checking is disabled.
+
+Additionally, runtime verification of some essential functions
+(e.g. those that are called inside a loop) may be explicitly disabled.
+To disable runtime checking for a single function, set
+``enabled=False`` using the ``@paranoidconfig`` decorator::
+
+  from paranoid.decorators import accepts, returns, paranoidconfig
+  @accepts(Number)
+  @returns(String)
+  @paranoidconfig(enabled=False)
+  def slow_function(x):
+      return run_slow_stuff(x)
+
+Alternatively, Paranoid Scientist can be disabled globally using::
+
+  from paranoid.settings import Settings
+  Settings.set(enabled=False)
 
 How is Paranoid Scientist different from MyPy?
 ----------------------------------------------
 
-MyPy is an optional static typing system for Python, and aims to
-answer the question: "If I run this script, will it succeed?"  Thus,
-it is a static analyzer which can find several bugs before they arise
-in production environments.
+MyPy (and Pyre) provide an optional static typing system for Python,
+and aim to answer the question: "If I run this program, will it
+succeed?"  Thus, it is a static analyzer which can find several bugs
+before they arise in production environments.
 
 By contrast, Paranoid Scientist answers the question "If I already ran
-this script, was the result I received correct?"  It does not do
+this program, was the result I received correct?"  It does not do
 static analysis, but rather makes the program crash if it detects
 potential problems.
 
@@ -151,7 +167,7 @@ conceptually distinct:
   exceptions that may be raised
 - Paranoid Scientist is most concerned with humans being able to
   understand the entry and exit conditions at a glance, whereas
-  contracts do not.
+  contracts do not have this focus.
 
 These properties give Paranoid Scientist a few unique features which
 are either awkward or impossible with contracts:
@@ -171,8 +187,8 @@ Paranoid Scientist's types can be thought of as the duck typed type
 system.
 
 In general, Pythonic code relies on duck typing, which is great in
-many situations but is a nightmare for scientific programming.  As an
-example, consider the following::
+many situations but increases the probability of undetected bugs.  As
+an example, consider the following::
 
   M = get_data_as_matrix()
   M_squared = M**2
@@ -204,7 +220,7 @@ Forgetting to cast an array to a matrix (or vice versa) can introduce
 subtle bugs into your code that could easily go undetected.
 
 By contrast, the type system in Paranoid Scientist only mandates that
-types act like some specific concept which is undestandable to humans
+types act like some specific concept which is understandable to humans
 in particular situations.  For example, if it looks like a Number and
 quacks like a Number, then it doesn't matter whether the underlying
 datatype is a float or an int.

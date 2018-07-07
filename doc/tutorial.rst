@@ -6,7 +6,7 @@ Introduction to Types
 
 The term "type" in Paranoid Scientist does not mean "type" in the same
 sense that a programming language might use the word.  "Types" here do
-not depend on the internal respresentation of variables, but rather,
+not depend on the internal representation of variables, but rather,
 on the way that they will be interpreted by humans.
 
 As an example, suppose we want to implement a function which takes a
@@ -44,10 +44,10 @@ annotate the function as follows::
 The "Number" type includes both floating points and integers, but
 excludes NaN and Inf.
 
-Similarly, we can use other human-undestandable types.  The following
+Similarly, we can use other human-understandable types.  The following
 function computes the expected number of "heads" in a biased coin,
-when we flip a coin with a `p_heads` probability of showing heads
-`flips` number of times::
+when we flip a coin with a ``p_heads`` probability of showing heads
+``flips`` number of times::
 
   from paranoid.decorators import accepts, returns
   from paranoid.types import Natural1, Natural0, Range
@@ -57,13 +57,13 @@ when we flip a coin with a `p_heads` probability of showing heads
   def biased_coin(flips, p_heads):
       return round(flips * p_heads)
 
-The `Natural1` type represents a natural number excluding zero, the
-`Natural0` type is a natural number including zero, and `Range` is any
+The ``Natural1`` type represents a natural number excluding zero, the
+``Natural0`` type is a natural number including zero, and ``Range`` is any
 number within the range.
 
 Additionally, the same syntax can be used in class methods, as long as
-the class is flagged with the `@paranoidclass` decorator.  The special
-type `Self` should be used for the `self` arguments in class methods::
+the class is flagged with the ``@paranoidclass`` decorator.  The special
+type ``Self`` should be used for the ``self`` arguments in class methods::
 
   from paranoid.decorators import accepts, returns, paranoidclass
   from paranoid.types import Self, Number, Boolean
@@ -83,12 +83,21 @@ type `Self` should be used for the `self` arguments in class methods::
               return True
           return False
 
-Currently, Paranoid Scientist does not operate on the `__init__`
+Currently, Paranoid Scientist does not operate on the ``__init__``
 method.  This is because, unlike all other methods in a class, the
-`self` argument does not represent a fully instantiated class.  In
-other words, the purpose of the `__init__` function is to help create
-the `self` object, and therefore it does not make sense to test
-whether the `self` object is valid, because clearly it is not.
+``self`` argument does not represent a fully instantiated class.  In
+other words, the purpose of the ``__init__`` function is to help create
+the ``self`` object, and therefore it does not make sense to test
+whether the ``self`` object is valid, because clearly it is not.
+
+Note also that specifications to ``@accepts`` can optionally be passed
+with keyword arguments.  In the above case, the following are
+equivalent::
+
+  @accepts(Self, Number, Number, Number, Number)
+  @accepts(self=Self, xmin=Number, xmax=Number, ymin=Number, ymax=Number)
+  @accepts(Self, Number, Number, ymin=Number, ymax=Number)
+  @accepts(xmin=Number, ymin=Number, xmax=Number, ymax=Number, self=Self)
 
 Creating types
 --------------
@@ -108,18 +117,18 @@ value is a part of the type, and to generate new values of the type.
 
 The simplest types consist of two main components: 
 
-- A function called `test` to test values to see if they are a part of
+- A function called ``test`` to test values to see if they are a part of
   the type.  This function should accept one argument (the value to be
   tested), and should use **assert statements only** to test whether
   the value is of the correct type.  The function should have only two
-  behaviors: executing successfully retuning nothing (if the value is
+  behaviors: executing successfully returning nothing (if the value is
   of the correct type), or throwing an assertion error (if the value
   is not of the correct type).
-- A generator called `generate` to create test cases for the type.  It
+- A generator called ``generate`` to create test cases for the type.  It
   should use Python's yield statement for each test case.  It should
   not throw any errors.
 
-All types should inherit from `paranoid.base.Type`.
+All types should inherit from ``paranoid.base.Type``.
 
 Consider the following simple type::
 
@@ -148,8 +157,8 @@ This works as expected::
     >>> all([v in BinaryString() for v in BinaryString().generate()])
     True
 
-Notice that in the constructor, we use the `in` syntax.  The syntax `x
-in Natural0()` returns True if `Natural0().test(x)` does not raise an
+Notice that in the constructor, we use the ``in`` syntax.  The syntax ``x
+in Natural0()`` returns True if ``Natural0().test(x)`` does not raise an
 exception.
 
 A type may also contain arguments, in which case a constructor must
@@ -195,8 +204,8 @@ Creating types from an existing class
 Any normal Python class can be converted into a type.  In essence,
 this allows the data within the class to be validated and tested.  Any
 class can be turned into a type by adding two static methods:
-`_test(v)`, and `_generate()`, which are analogous to the `test(self,
-v)` and `generate(self)` functions described previously.
+``_test(v)``, and ``_generate()``, which are analogous to the ``test(self,
+v)`` and ``generate(self)`` functions described previously.
 
 Let's look back at our example of the point in 2D space and turn this
 into a type::
@@ -228,7 +237,7 @@ into a type::
           yield Point(1, 4/7)
           yield Point(-10, -1.99)
 
-Types based on classes do not override the `in` syntax.
+Types based on classes do not override the ``in`` syntax.
 
     >>> Point._test(Point(3, 4))
     >>> Point._test(Point(3, "4"))
@@ -239,18 +248,29 @@ Types based on classes do not override the `in` syntax.
     >>> [Point._test(v) for v in Point._generate()]
     [None, None, None]
 
-As you can see, the `_test(v)` function takes a single variable input,
+However, you can pass it as an argument to the ``Generic()`` function to
+use this syntax.
+
+    >>> from paranoid.types import Generic
+    >>> Point(3, 4) in Generic(Point)
+    True
+    >>> Point(3, "4") in Generic(Point)
+    False
+    >>> "Point(3,4)" in Generic(Point)
+    False
+
+As you can see, the ``_test(v)`` function takes a single variable input,
 and tests to see if it is a valid member of this class.  Valid
-instances of this class should have `self.x` and `self.y` values which
+instances of this class should have ``self.x`` and ``self.y`` values which
 are numbers.  It would not be valid to use a string for an x position.
 
-Likewise, the `_generate()` function yields valid instances of this
+Likewise, the ``_generate()`` function yields valid instances of this
 class.
 
 Unlike when we create types from scratch, we do **not** pass the
-`self` argument to these functions because they are static methods.
-This is because the type is defined based on the class, not based on
-the instance of the class.
+``self`` argument to the ``_test()`` or ``_generate()`` functions
+because they are static methods.  This is because the type is defined
+based on the class, not based on the instance of the class.
 
 Using this syntax makes these types valid for all argument and return
 types.  For example, we can define a function which takes Points as
@@ -281,8 +301,8 @@ Automated testing
 
 As you can see from many of the examples given here, it makes sense to
 test functions by generating values to pass to the function using the
-`accepts` type information, and checking that the return values fit
-the `returns` type information.  Indeed, Paranoid Scientist will
+``@accepts`` type information, and checking that the return values fit
+the ``@returns`` type information.  Indeed, Paranoid Scientist will
 automate this process.
 
 Basic automatic unit-test--like functionality is available in Paranoid
@@ -296,7 +316,7 @@ annotations, and generate a number of test cases for each function to
 ensure that the function doesn't fail, and ensure that it satisfies
 the "returns"/"ensures" exit conditions.
 
-To test an entire package rather than a single file, use the `-m`
+To test an entire package rather than a single file, use the ``-m``
 switch::
 
     $ python3 -m paranoid -m mymodule
@@ -307,10 +327,10 @@ is useful to complement them.
 Entry conditions
 ----------------
 
-In addition to the `accepts` and `returns` conditions, we can also
+In addition to the ``@accepts`` and ``@returns`` conditions, we can also
 specify more complex relationships among variables.  No type can
 define interactions between multiple variables.  For this, we can use
-the `requires` operator to specify entry conditions.  This takes a
+the ``@requires`` operator to specify entry conditions.  This takes a
 string of valid Python describing the relationship between the
 variables.
 
@@ -336,7 +356,7 @@ us to write::
   def invert_difference(x, y):
       return 1/(x-y)
 
-It is also possible to use the `requires` decorator to simplify highly
+It is also possible to use the ``@requires`` decorator to simplify highly
 redundant types.  For example, we could write::
 
   from paranoid.decorators import accepts, requires
@@ -352,7 +372,7 @@ be possible to create such a type for the purposes of this function,
 it would start to get messy very quickly to have distinct but nearly
 identical types for each function. It is more practical in this
 example to put a constraint on the function's domain using the
-`requires` condition.
+``@requires`` condition.
 
 Automated tests will only test functions if their entry conditions are
 satisfied.
@@ -363,7 +383,7 @@ Exit conditions
 In addition to entry conditions, it is also possible to specify exit
 conditions in a similar manner.  Exit conditions are notated similarly
 to entry conditions (i.e. Python code inside a string) using the
-`ensures` decorator, and specify what must hold after the function
+``@ensures`` decorator, and specify what must hold after the function
 executes.  Exit conditions use the magic variable "return" to describe
 how the arguments must relate to return values.  For example::
 
@@ -387,7 +407,7 @@ This gives the output::
     params: {'l': [1, 1, 1, 1], '__RETURN__': 1.0}
 
 For convenience, exit conditions also allow two new pseudo-operators,
-`-->` and `<-->`, which mean "if" and "if and only if" respectively.
+``-->`` and ``<-->``, which mean "if" and "if and only if" respectively.
 For example::
 
   from paranoid.decorators import accepts, returns, ensures
@@ -406,10 +426,10 @@ from a function's execution to test more complex properties of the
 function.
 
 In order to use a previous value within exit conditions, add a
-backtick after the variable name, e.g. `x` is the current value and
-`x\`` is any previous value of x.  (The pneumonic for this is :math:`x`
-for the variable and :math:`x'` for previous values as might be written in
-a universal quantifier, e.g. :math:`\forall x,x' \in S : \ldots`.
+backtick after the variable name, e.g. ``x`` is the current value and
+``x``` is any previous value of x.  (The mnemonic for this is :math:``x``
+for the variable and :math:``x'`` for previous values as might be written in
+a universal quantifier, e.g. :math:``\forall x,x' \in S : \ldots``.
 
 Why is this useful?  Now, we can test complex properties like a
 function's monotonicity::
@@ -422,3 +442,24 @@ function's monotonicity::
   @ensures("x > x` --> return >= return`")
   def monotonic(x):
       return x**3
+
+Both entry and exit conditions may also use external libraries within
+the test.  This can be accomplished by changing the settings in
+Paranoid Scientist to include the external library of choice. For
+instance, to use Numpy and Numpy linear algebra::
+
+  from paranoid.decorators import accepts, returns, requires
+  import paranoid.types as pst
+  from paranoid.settings import Settings
+  import numpy as np
+  from numpy import linalg
+
+  Settings.set(namespace={"np": np, "nla": linalg})
+
+  @accepts(pst.NDArray(d=2, t=pst.Number))
+  @returns(pst.NDArray(d=2, t=pst.Number))
+  @requires("np.shape(m)[0] == np.shape(m)[1]") # Square
+  @requires("nla.det(m) != 0") # Invertible
+  def invert_matrix(m):
+      return linalg.inv(m)
+

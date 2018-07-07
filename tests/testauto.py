@@ -1,3 +1,17 @@
+# Copyright 2018 Max Shinn <max@maxshinnpotential.com>
+# 
+# This file is part of Paranoid Scientist, and is available under the
+# MIT license.  Please see LICENSE.txt in the root directory for more
+# information.
+
+"""Some example functions and classes.
+
+This is used to test Paranoid Scientist's automated testing.  Run it
+using:
+
+  $ python3 -m paranoid testauto.py
+"""
+
 from paranoid import *
 from paranoid.testfunctions import test_function
 
