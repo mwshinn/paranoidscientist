@@ -143,7 +143,10 @@ def _wrap(func):
             return func(*args, **kwargs)
         # We only run this function once for performance reasons, and
         # then pass it as an argument to each check function.
-        argvals = inspect.getcallargs(func, *args, **kwargs)
+        sig = inspect.Signature.from_callable(func)
+        boundargs = sig.bind_partial(*args, **kwargs)
+        boundargs.apply_defaults()
+        argvals = dict(boundargs.arguments)
 
         # Check entry conditions, run the function, check exit
         # conditions, and return the result of the function.

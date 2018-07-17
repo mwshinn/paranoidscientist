@@ -4,6 +4,8 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
+"""Automatic testing of a single function."""
+
 import inspect
 import itertools
 import signal
