@@ -41,7 +41,7 @@ class Numeric(Type):
             yield np.uint16(1)
             yield np.int0(-1)
             yield np.float16(3.141)
-            yield np.float128(.01)
+            yield np.float64(.01)
 
 class ExtendedReal(Numeric):
     """Any integer or float, excluding nan."""
@@ -65,7 +65,7 @@ class ExtendedReal(Numeric):
             yield np.uint16(1)
             yield np.int0(-1)
             yield np.float16(3.141)
-            yield np.float128(.01)
+            yield np.float64(.01)
 
 class Number(Numeric):
     """Any integer or float, excluding inf, -inf, and nan."""
@@ -86,8 +86,8 @@ class Number(Numeric):
             yield np.uint16(1)
             yield np.int0(-1)
             yield np.float16(3.141)
-            yield np.float128(.01)
-            yield np.float128(10)
+            yield np.float64(.01)
+            yield np.float64(10)
 
 class Integer(Number):
     """Any integer."""
