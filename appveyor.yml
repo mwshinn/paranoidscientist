@@ -1,0 +1,22 @@
+build: false
+
+environment:
+  matrix:
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.x"
+      PYTHON_ARCH: "32"
+
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "32"
+
+init:
+  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
+
+install:
+  - "%PYTHON%/Scripts/pip.exe install pytest"
+
+test_script:
+  - "python3 -m paranoid tests/testauto.py"
+  - "python3 -m pytest tests/tests.py"
+

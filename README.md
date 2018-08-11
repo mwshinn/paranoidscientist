@@ -1,6 +1,8 @@
 Paranoid Scientist
 ==================
 
+[![Build Status](https://travis-ci.com/mwshinn/paranoidscientist.svg?branch=master)](https://travis-ci.com/mwshinn/paranoidscientist)
+
 Paranoid Scientist is a Python module which allows runtime
 verification of entry and exit conditions for Python functions using a
 novel type system which prioritizes the interpretation of types over
