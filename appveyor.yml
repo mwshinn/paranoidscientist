@@ -17,6 +17,6 @@ install:
   - "%PYTHON%/Scripts/pip.exe install pytest"
 
 test_script:
-  - "python3 -m paranoid tests/testauto.py"
-  - "python3 -m pytest tests/tests.py"
+  - "%PYTHON%/python -m paranoid tests/testauto.py"
+  - "%PYTHON%/python -m pytest tests/tests.py"
 
