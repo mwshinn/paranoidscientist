@@ -6,6 +6,10 @@
 Paranoid Scientist
 ==================
 
+.. image:: images/paranoid_scientist_logo.png
+   :class: align-right
+   :width: 30%
+
 Paranoid Scientist is a Python module which allows runtime
 verification of entry and exit conditions for Python functions using
 a novel type system which prioritizes the interpretation of types over
