@@ -37,7 +37,8 @@ for more information.
 ## License
 
 All code is available under the MIT license.  See LICENSE.txt for more
-information.
+information.  Code is copyright 2018 Max Shinn.  The logo is copyright
+2018 Anastasia Ershova.
 
 
 ## What types are included by default?
