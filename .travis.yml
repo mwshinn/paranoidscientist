@@ -5,12 +5,11 @@ python:
   - "3.5"
   - "3.6"
 env:
-  - INST_PACKAGES=numpy
-  - INST_PACKAGES=
+  - INST_PACKAGES=numpy pytest
+  - INST_PACKAGES=pytest
 
 # install dependencies
 install:
-  - pip install pytest
   - pip install $INST_PACKAGES
   - pip install .
 # run tests
