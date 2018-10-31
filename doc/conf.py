@@ -105,6 +105,7 @@ html_static_path = ['_static']
 # html_sidebars = {}
 html_sidebars = { '**': ['globaltoc.html', 'relations.html', 'searchbox.html'], }
 
+html_logo = "images/paranoid_scientist_mini_small_corner.png"
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
