@@ -68,10 +68,10 @@ Alternatively, Paranoid Scientist can be disabled globally using::
 How is Paranoid Scientist different from MyPy?
 ----------------------------------------------
 
-MyPy (and Pyre) provide an optional static typing system for Python,
-and aim to answer the question: "If I run this program, will it
-succeed?"  Thus, it is a static analyzer which can find several bugs
-before they arise in production environments.
+MyPy (and Pyre, and PyType, and PyRight) provide an optional static
+typing system for Python, and aim to answer the question: "If I run
+this program, will it succeed?"  Thus, it is a static analyzer which
+can find several bugs before they arise in production environments.
 
 By contrast, Paranoid Scientist answers the question "If I already ran
 this program, was the result I received correct?"  It does not do

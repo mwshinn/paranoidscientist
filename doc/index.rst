@@ -11,14 +11,15 @@ Paranoid Scientist
    :width: 30%
 
 Paranoid Scientist is a Python module which allows runtime
-verification of entry and exit conditions for Python functions using
-a novel type system which prioritizes the interpretation of types over
+verification of entry and exit condition contracts for Python using
+refinement types, and prioritizes the interpretation of types over
 their representation.  More specifically, it provides the following:
 
-- A **novel type system**, which emphasizes the *meaning* of the type
-  instead of the *data structure* of the type.
 - Verification of arbitrary **entry and exit conditions**, including more
   complex expressions with universal quantification.
+- Function arguments and return types specified using **refinement
+  types**, which emphasizes the *meaning* of the type instead of the
+  *data structure* of the type.
 - **Automated testing** of individual functions to determine, before
   execution of the program, whether functions conform to their
   specification.
