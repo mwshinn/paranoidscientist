@@ -118,11 +118,14 @@ class TestTypes(TestCase):
             identity_test(pt.List(t))
             identity_test(pt.Dict(k=pt.String, v=t))
             identity_test(pt.Dict(k=pt.Number, v=t))
+            identity_test(pt.Tuple(pt.Number, t))
         identity_test(pt.Set(["a", "b", "c"]))
         identity_test(pt.Set([1.3, "abc", -1]))
         identity_test(pt.ParametersDict({}))
         identity_test(pt.ParametersDict({k : v for (k,v) in
                                          zip(ascii_letters, alltypes)}))
+        identity_test(pt.Tuple(pt.Number))
+        identity_test(pt.Tuple(pt.Number, pt.String, pt.Number))
 
     def test_TypeFactory(self):
         """Safely returning types using TypeFactory"""

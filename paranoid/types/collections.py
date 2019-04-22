@@ -4,7 +4,7 @@
 # MIT license.  Please see LICENSE.txt in the root directory for more
 # information.
 
-__all__ = ['Set', 'List', 'Dict', 'ParametersDict']
+__all__ = ['Set', 'List', 'Tuple', 'Dict', 'ParametersDict', ]
 from .base import Type, TypeFactory
 
 class Set(Type):
@@ -40,6 +40,20 @@ class List(Type):
         yield [] # Empty list
         yield [gv for gv in self.type.generate()] # A list of those types
         yield [next(self.type.generate())]*1000 # A long list
+
+class Tuple(Type):
+    """A Python tuple."""
+    def __init__(self, *args):
+        super().__init__()
+        self.types = [TypeFactory(t) for t in args]
+    def test(self, v):
+        super().test(v)
+        assert isinstance(v, tuple), "Non-tuple passed"
+        assert len(v) == len(self.types)
+        for i in range(0, len(v)):
+            self.types[i].test(v[i])
+    def generate(self):
+        yield tuple([next(t.generate()) for t in self.types]) # A tuple of the passed types
 
 class Dict(Type):
     """A Python dictionary."""
