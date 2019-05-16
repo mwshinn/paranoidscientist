@@ -126,6 +126,7 @@ class TestTypes(TestCase):
                                          zip(ascii_letters, alltypes)}))
         identity_test(pt.Tuple(pt.Number))
         identity_test(pt.Tuple(pt.Number, pt.String, pt.Number))
+        pair_fails(pt.Tuple(pt.Number, pt.Number), pt.Tuple(pt.Number))
 
     def test_TypeFactory(self):
         """Safely returning types using TypeFactory"""

@@ -57,6 +57,11 @@ def square3(n):
 def sumlist(l):
     return sum(l)
 
+@accepts(Tuple(Integer(), Integer, Integer))
+@returns(Integer())
+def sum3tuple(l):
+    return sum(l)
+
 @accepts(Dict(String(), Number()))
 @returns(Dict(String(), Number()))
 def ident(d):
@@ -88,6 +93,7 @@ def pass_it(s):
 @accepts(Number())
 @returns(Number())
 @ensures("n` <= n <--> return` <= return")
+@paranoidconfig(max_cache=10)
 def monotonic(n):
     return n**3
 
@@ -97,8 +103,16 @@ def monotonic(n):
 @ensures("return >= m + n")
 @ensures("m > 0 and n > 0 --> return > 0")
 @ensures("m` >= m and n` >= n --> return` >= return")
+@paranoidconfig(max_cache=10)
 def add(n, m):
     return n+m
+
+@accepts(Number)
+@returns(Number)
+@ensures("x` < x < x`` --> return < (return``-return`)/(x``-x`)*(x-x`)+return`")
+@paranoidconfig(max_cache=10)
+def concave(x):
+    return x**2
 
 @paranoidclass
 class MyClass:

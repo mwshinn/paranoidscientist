@@ -7,8 +7,9 @@
 """Function (and class) decorators which constitute the primary Paranoid Scientist interface"""
 
 __all__ = ['accepts', 'requires', 'returns', 'ensures', 'paranoidclass', 'paranoidconfig']
-import functools
+import functools, itertools
 import inspect
+from random import randint
 from copy import deepcopy
 from . import utils as U
 from .types import base as T
@@ -16,6 +17,10 @@ from .types.collections import Dict, List
 from .types.string import String
 from . import exceptions as E
 from .settings import Settings
+
+# Constants used internally
+_BT = "__BACKTICK__"
+_RET = "__RETURN__"
 
 
 def _check_accepts(func, argvals):
@@ -55,85 +60,51 @@ def _check_returns(func, returnvalue):
             U.get_fun_prop(func, "returntype").test(returnvalue)
         except AssertionError as e:
             raise E.ReturnTypeError("Invalid return type of %s in %s" % (returnvalue, func.__qualname__) )
-    
+
 def _check_ensures(func, returnvalue, argvals):
-        # @ensures decorator
-        if U.has_fun_prop(func, "ensures"):
-            # Function named arguments
-            limited_globals = Settings.get("namespace").copy()
-            limited_globals.update(argvals)
-            # Return value
-            limited_globals['__RETURN__'] = returnvalue
-            if any(btdepth>0 for btdepth,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
-                if U.has_fun_prop(func, "exec_cache"):
-                    exec_cache = U.get_fun_prop(func, "exec_cache")
-                else:
-                    exec_cache = []
-                    U.set_fun_prop(func, "exec_cache", exec_cache)
-                exec_cache.append(limited_globals.copy())
-                if len(exec_cache) > Settings.get("max_cache", function=func):
-                    exec_cache.pop(0) # TODO Hack for now, change this mechanism
-            for btdepth, ensurement, etext in U.get_fun_prop(func, "ensures"):
-                # Here we check the higher order properties, e.g. x,
-                # x`, and x``. There is a lot of repeated and opaque
-                # code here, but I've tried to write it in the
-                # cleanest way possible.
-                _bt = "__BACKTICK__"
-                _dbt = "__DOUBLEBACKTICK__"
-                if btdepth == 2:
-                    exec_cache = U.get_fun_prop(func, "exec_cache")
-                    # For some variable var, replace var` and var``
-                    # with elements from the cache.  var will already
-                    # be set to the present argument value.
-                    for i,cache_item in enumerate(exec_cache):
-                        limited_globals.update({k+_bt : v for k,v in cache_item.items()})
-                        for j,cache_item2 in enumerate(exec_cache):
-                            if i == j: continue
-                            limited_globals.update({k+_dbt : v for k,v in cache_item2.items()})
-                            if not eval(ensurement, limited_globals, {}):
-                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
-                    # Now the next way around: set var` to be the
-                    # present argument value and var and var`` to be
-                    # from the cache.
-                    limited_globals.update({k+_bt : v for k,v in argvals.items()})
-                    for i,cache_item in enumerate(exec_cache):
-                        limited_globals.update({k : v for k,v in cache_item.items()})
-                        for j,cache_item2 in enumerate(exec_cache):
-                            if i == j: continue
-                            limited_globals.update({k+_dbt : v for k,v in cache_item2.items()})
-                            if not eval(ensurement, limited_globals, {}):
-                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
-                    # Finally, the last arrangement: set var`` to be
-                    # the present argument and var and var` to be from
-                    # the cache.
-                    limited_globals.update({k+_dbt : v for k,v in argvals.items()})
-                    for i,cache_item in enumerate(exec_cache):
-                        limited_globals.update({k : v for k,v in cache_item.items()})
-                        for j,cache_item2 in enumerate(exec_cache):
-                            if i == j: continue
-                            limited_globals.update({k+_bt : v for k,v in cache_item2.items()})
-                            if not eval(ensurement, limited_globals, {}):
-                                raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
-                elif btdepth == 1:
-                    exec_cache = U.get_fun_prop(func, "exec_cache")
-                    # For some variable var, replace var` with an
-                    # element from the cache.  var will already be set
-                    # to the present argument value.
-                    for cache_item in exec_cache:
-                        limited_globals.update({k+_bt : v for k,v in cache_item.items()})
-                        if not eval(ensurement, limited_globals, {}):
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
-                    # Now the other way around: set var` to be the
-                    # present argument value and var to be from the
-                    # cache.
-                    limited_globals.update({k+_bt : v for k,v in argvals.items()})
-                    for cache_item in exec_cache:
-                        limited_globals.update({k : v for k,v in cache_item.items()})
-                        if not eval(ensurement, limited_globals, {}):
-                            raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(argvals)))
-                else:
+    # @ensures decorator
+    if U.has_fun_prop(func, "ensures"):
+        # This function call
+        current_call = argvals
+        current_call[_RET] = returnvalue
+        if U.has_fun_prop(func, "exec_cache"):
+            exec_cache = U.get_fun_prop(func, "exec_cache")
+        else:
+            exec_cache = []
+        for btdepth, ensurement, etext in U.get_fun_prop(func, "ensures"):
+            # Here we check the higher order properties, e.g. x,
+            # x`, and x``. There is a lot of repeated and opaque
+            # code here, but I've tried to write it in the
+            # cleanest way possible.
+            for comb in itertools.combinations(exec_cache, btdepth):
+                for params in itertools.permutations([current_call]+list(comb)):
+                    env = dict()
+                    for i in range(0, btdepth+1):
+                        bts = "".join([_BT for j in range(0, i)])
+                        env.update({k+bts : v for k,v in params[i].items()})
+                    limited_globals = Settings.get("namespace").copy()
+                    limited_globals.update(env)
                     if not eval(ensurement, limited_globals, {}):
-                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(dict(**{"return": returnvalue}, **argvals))))
+                        env_simp = {k.replace(_BT, '`').replace(_RET, 'return'): v for k,v in env.items()}
+                        raise E.ExitConditionsError("Ensures statement '%s' failed in %s\nparams: %s" % (etext, func.__qualname__, str(env_simp)))
+        # Update the cache
+        if any(btdepth>0 for btdepth,_,_ in U.get_fun_prop(func, "ensures")) : # Cache if we refer to previous executions
+            # Keep track of number of executions for reservoir
+            # sampling probabilities
+            if exec_cache == []:
+                n_execs = 1
+                U.set_fun_prop(func, "exec_cache", exec_cache) # Create exec cache if it doesn't exist
+            else:
+                n_execs = U.get_fun_prop(func, "n_execs") + 1
+            U.set_fun_prop(func, "n_execs", n_execs)
+            # Use reservoir sampling to maintain the cache
+            max_cache_size = Settings.get("max_cache", function=func)
+            if n_execs <= max_cache_size:
+                exec_cache.append(current_call)
+            else:
+                rn = randint(0, n_execs)
+                if rn < max_cache_size:
+                    exec_cache[rn] = current_call
 
 
 def _wrap(func):
@@ -323,7 +294,7 @@ def ensures(condition):
             ensures_statements = U.get_fun_prop(func, "ensures")
         else:
             ensures_statements = []
-        e = condition.replace("return", "__RETURN__")
+        e = condition.replace("return", _RET)
         if "<-->" in e:
             e_parts = e.split("<-->")
             assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__qualname__)
@@ -333,20 +304,14 @@ def ensures(condition):
             e_parts = e.split("-->")
             assert len(e_parts) == 2, "Only one implies per statement in %s condition %s" % (ensurement, func.__qualname__)
             e = "(%s) if (%s) else True" % (e_parts[1], e_parts[0])
-        _bt = "__BACKTICK__"
-        _dbt = "__DOUBLEBACKTICK__"
-        if "``" in e:
-            e = e.replace("``", _dbt)
-            e = e.replace("`", _bt)
-            compiled = compile(e, '', 'eval')
-            U.set_fun_prop(func, "ensures", [(2, compiled, condition)]+ensures_statements)
-        elif "`" in e:
-            e = e.replace("`", _bt)
-            compiled = compile(e, '', 'eval')
-            U.set_fun_prop(func, "ensures", [(1, compiled, condition)]+ensures_statements)
-        else:
-            compiled = compile(e, '', 'eval')
-            U.set_fun_prop(func, "ensures", [(0, compiled, condition)]+ensures_statements)
+        # btdepth is the maximum number of consecutive ` characters
+        # that appears in the ensures statement, and represents power
+        # of the number of comparisons we must perform on cached
+        # values.
+        btdepth = max([0]+[sum(1 for x in g) for c,g in itertools.groupby(e) if c == "`"])
+        e = e.replace("`", _BT)
+        compiled = compile(e, '', 'eval')
+        U.set_fun_prop(func, "ensures", [(btdepth, compiled, condition)]+ensures_statements)
         return _wrap(func)
     return _decorator
 
