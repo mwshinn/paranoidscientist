@@ -6,6 +6,8 @@
 
 import sys
 import re
+from io import StringIO
+from contextlib import redirect_stdout
 from .testfunctions import test_function
 
 # If called as "python3 -m verify script_file_name.py", then unit test
@@ -59,12 +61,20 @@ if __name__ == "__main__":
         # make-shift progress bar.
         start_text = "    Testing %s..." % f.__name__
         print(start_text, end="", flush=True)
-        ntests = test_function(f)
+        pseudo_stdout = StringIO()
+        with redirect_stdout(pseudo_stdout):
+            ntests = test_function(f)
+        stdout = pseudo_stdout.getvalue()
+        if len(stdout) == 0: # Erase only if nothing was printed during testing
+            print("\b"*len(start_text), end="")
+        else:
+            print("\n", end="")
+            print(stdout, end="")
         # Extra spaces after "Tested %s" compensate for the fact that
         # the string to signal the start of testing function f is
         # longer than the string to signal function f has been tested,
         # so this avoids leaving extra characters on the terminal.
-        print("\b"*len(start_text)+"    Tested %i values for %s    " % (ntests, f.__name__), flush=True)
+        print("    Tested %i values for %s    " % (ntests, f.__name__), flush=True)
         if ntests == 0:
             untested.append(f.__name__)
     print("Tested %i functions in %s." % (len(all_functions), name))
