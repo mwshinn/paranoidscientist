@@ -8,6 +8,7 @@ __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
            'Self', 'Nothing', 'Function', 'Boolean', 'And', 'Or', 'Not']
 
 from ..exceptions import VerifyError, NoGeneratorError
+import inspect
 
 def TypeFactory(v):
     """Ensure `v` is a valid Type.
@@ -111,6 +112,38 @@ class Generic(Type):
         else:
             raise NoGeneratorError("Please define a _generate() function in "
                                    "class %s." % self.type.__name__)
+
+class InitGeneric(Type):
+    """For the self argument passed to __init__. Should not be used directly, use Self instead.
+
+    Before a class is initialized (i.e. __init__ is called), it may
+    not be valid according to its _test method.  Likewise, passing a
+    fully initialized class value to __init__ through the self
+    parameter may cause problems, as the self parameter for __init__
+    is the output of the __new__ method.  Thus, the __init__ function
+    must be handled separately.  This tests only object identity, and
+    generates types based on the __new__ method.  This may fail for 
+
+    """
+    def __init__(self, typ):
+        super().__init__()
+        assert isinstance(typ, type)
+        assert not isinstance(typ, Type), "Types don't need to be wrapped"
+        self.type = typ
+    def test(self, v):
+        assert isinstance(v, self.type)
+    def generate(self):
+        # We can't generate if the __new__ method takes arguments
+        nargs = len(inspect.getfullargspec(self.type.__new__).args)
+        if nargs == 1:
+            # __new__ automatically calls __init__, so set __init__ to
+            # an empty function to temporarily avoid calling it
+            init = self.type.__init__
+            self.type.__init__ = lambda *args, **kwargs: None
+            obj = self.type.__new__(self.type)
+            self.type.__init__ = init
+            yield obj
+    
 
 class Self(Type):
     """Used only as a placeholder for methods with a 'self' argument."""

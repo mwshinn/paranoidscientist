@@ -180,12 +180,13 @@ class TestTypes(TestCase):
         """The Self variable and defining types from classes"""
         @pd.paranoidclass
         class MyClass:
+            @pd.accepts(pt.Self, pt.Integer)
             def __init__(self, val):
                 self.val = val
             @staticmethod
             def _generate():
                 yield MyClass(1)
-                yield MyClass("string")
+                yield MyClass(-5)
             @staticmethod
             def _test(v):
                 v.val in pt.Integer()
@@ -197,6 +198,10 @@ class TestTypes(TestCase):
         identity_test(pt.Generic(MyClass))
         assert function_test(MyClass.get_val) > 0
         pair_test(pt.TypeFactory(MyClass), pt.Generic(MyClass))
+        fails(lambda : MyClass("a"))
+        inst = MyClass(2)
+        inst2 = inst.get_val()
+        inst2.get_val()
 
     def test_class_type_inheritance(self):
         """Test whether inherited methods properly resolve Self"""

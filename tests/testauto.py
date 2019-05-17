@@ -116,6 +116,7 @@ def concave(x):
 
 @paranoidclass
 class MyClass:
+    @accepts(Self, Number)
     def __init__(self, val, **kwargs):
         self.val = val
         self.extraargs = kwargs
