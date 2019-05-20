@@ -146,7 +146,7 @@ class Range(Number):
     roundoff errors, some code may fail.
     """
     def __init__(self, low, high):
-        super().__init__()
+        super().__init__(low=low, high=high)
         assert low in Numeric() and high in Numeric(), "Invalid bounds"
         assert not (math.isnan(low) or math.isnan(high)), "Bounds can't be nan"
         assert low < high, \
@@ -229,7 +229,7 @@ class Positive(Number):
 class NDArray(Type):
     """A numpy ndarray of dimension `d` and type `t`."""
     def __init__(self, d=None, t=None):
-        super().__init__()
+        super().__init__(d=d, t=t)
         assert USE_NUMPY, "Numpy support not enabled"
         if d is not None:
             assert (d in Integer())  and d>0

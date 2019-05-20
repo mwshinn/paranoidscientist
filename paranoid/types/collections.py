@@ -16,7 +16,7 @@ class Set(Type):
     `els`.
     """
     def __init__(self, els):
-        super().__init__()
+        super().__init__(els=els)
         assert hasattr(els, "__contains__") and callable(els.__contains__)
         self.els = els
     def test(self, v):
@@ -29,7 +29,7 @@ class Set(Type):
 class List(Type):
     """A Python list."""
     def __init__(self, t):
-        super().__init__()
+        super().__init__(t=t)
         self.type = TypeFactory(t)
     def test(self, v):
         super().test(v)
@@ -44,7 +44,7 @@ class List(Type):
 class Tuple(Type):
     """A Python tuple."""
     def __init__(self, *args):
-        super().__init__()
+        super().__init__(*args)
         self.types = [TypeFactory(t) for t in args]
     def test(self, v):
         super().test(v)
@@ -58,7 +58,7 @@ class Tuple(Type):
 class Dict(Type):
     """A Python dictionary."""
     def __init__(self, k, v):
-        super().__init__()
+        super().__init__(k=k, v=v)
         self.valtype = TypeFactory(v)
         self.keytype = TypeFactory(k)
     def test(self, v):
@@ -83,7 +83,7 @@ class ParametersDict(Type):
     in `params` must be specified for this type to be valid.
     """
     def __init__(self, params, all_mandatory=False):
-        super().__init__()
+        super().__init__(params=params, all_mandatory=all_mandatory)
         # Future note: if this is modified to work with non-strings
         # for keys, then adjust the test() function accordingly, in
         # particular, the line checking that there are no extra keys

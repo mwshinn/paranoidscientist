@@ -5,7 +5,8 @@
 # information.
 
 __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
-           'Self', 'Nothing', 'Function', 'Boolean', 'And', 'Or', 'Not']
+           'InitGeneric', 'Self', 'Nothing', 'Function', 'Boolean',
+           'And', 'Or', 'Not']
 
 from ..exceptions import VerifyError, NoGeneratorError
 import inspect
@@ -32,7 +33,11 @@ def TypeFactory(v):
     else:
         raise InvalidTypeError("Invalid type %s" % v)
 
-class Type():
+class _MetaType(type):
+    def __repr__(cls):
+        return cls.__name__
+
+class Type(metaclass=_MetaType):
     """The base Type, from which all variable types should inherit.
 
     What is a Type?  While "types" can include standard types built
@@ -43,6 +48,17 @@ class Type():
     All types must inherit from this class.  They must define the
     "test" and "generate" functions.
     """
+    def __init__(self, *args, **kwargs):
+        # Create the string representation
+        pargs = [repr(v) for v in args]
+        kargs = [k+"="+repr(v) for k,v in kwargs.items()]
+        allargs = pargs+kargs
+        self._repr = self.__class__.__name__
+        if allargs:
+            self._repr += "(%s)" % (", ".join(pargs+kargs))
+        super().__init__()
+    def __repr__(self):
+        return self._repr
     def test(self, v):
         """Check whether `v` is a valid value of this type.  Throws an
         assertion error if `v` is not a valid value.
@@ -62,7 +78,7 @@ class Type():
 class Constant(Type):
     """Only one valid value, which is passed at initialization"""
     def __init__(self, const):
-        super().__init__()
+        super().__init__(const=const)
         assert const is not None, "None cannot be a constant"
         self.const = const
     def __repr__(self):
@@ -78,8 +94,10 @@ class Unchecked(Type):
     def __init__(self, typ=None):
         if typ is not None:
             self.typ = TypeFactory(typ)
+            super().__init__(self.typ)
         else:
             self.typ = None
+            super().__init__()
     def generate(self):
         if self.typ is not None:
             yield from self.typ.generate()
@@ -94,7 +112,7 @@ class Generic(Type):
     "_generate()" should yield a finite number of instances of the class.
     """
     def __init__(self, typ):
-        super().__init__()
+        super().__init__(typ=typ)
         assert isinstance(typ, type)
         assert not isinstance(typ, Type), "Types don't need to be wrapped"
         self.type = typ
@@ -126,7 +144,7 @@ class InitGeneric(Type):
 
     """
     def __init__(self, typ):
-        super().__init__()
+        super().__init__(typ)
         assert isinstance(typ, type)
         assert not isinstance(typ, Type), "Types don't need to be wrapped"
         self.type = typ
@@ -185,8 +203,8 @@ class And(Type):
     the types.
     """
     def __init__(self, *types):
-        super().__init__()
         self.types = [TypeFactory(a) for a in types]
+        super().__init__(*self.types)
     def test(self, v):
         for t in self.types:
             t.test(v)
@@ -210,8 +228,8 @@ class Or(Type):
     the types.
     """
     def __init__(self, *types):
-        super().__init__()
         self.types = [TypeFactory(a) for a in types]
+        super().__init__(*self.types)
     def test(self, v):
         passed = False
         if not any(v in t for t in self.types):
@@ -230,7 +248,7 @@ class Not(Type):
     generate values.  It is most useful within an And clause.
     """
     def __init__(self, typ):
-        super().__init__()
+        super().__init__(typ)
         self.type = TypeFactory(typ)
     def test(self, v):
         assert not (v in self.type), "Not clause does not hold"

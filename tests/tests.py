@@ -226,6 +226,47 @@ class TestTypes(TestCase):
         myclass_sub2 = MyClassSub2()
         myclass_sub2.f()
         myclass_sub2.g()
+    def test_repr(self):
+        """Test whether the __repr__ correctly prints the class name"""
+        assert repr(pt.Constant(3)) == "Constant(3)"
+        assert repr(pt.Unchecked(pt.Number)) == "Unchecked(Number)"
+        assert repr(pt.Unchecked()) == "Unchecked"
+        class Dummy:
+            def __repr__(self): return "Dummy"
+        assert repr(pt.Generic(Dummy)) == "Generic(<class 'tests.TestTypes.test_repr.<locals>.Dummy'>)"
+        assert repr(pt.InitGeneric(Dummy)) == "InitGeneric(<class 'tests.TestTypes.test_repr.<locals>.Dummy'>)"
+        assert repr(pt.Self) == "Self"
+        assert repr(pt.Nothing) == "Nothing"
+        assert repr(pt.Function) == "Function"
+        assert repr(pt.Boolean) == "Boolean"
+        # This assert may fail on Python versions where dict order is
+        # not preserved
+        assert repr(pt.And(pt.Integer, pt.Range(0, 5))) == "And(Integer, Range(low=0, high=5))"
+        assert repr(pt.Or(pt.Integer, pt.Boolean)) == "Or(Integer, Boolean)"
+        assert repr(pt.Not(pt.Integer)) == "Not(Integer)"
+        assert repr(pt.Numeric) == "Numeric"
+        assert repr(pt.ExtendedReal) == "ExtendedReal"
+        assert repr(pt.Number) == "Number"
+        assert repr(pt.Integer) == "Integer"
+        assert repr(pt.Natural0) == "Natural0"
+        assert repr(pt.Natural1) == "Natural1"
+        assert repr(pt.Range(-1, 1)) == "Range(low=-1, high=1)"
+        assert repr(pt.RangeOpen(-1, 1)) == "RangeOpen(low=-1, high=1)"
+        assert repr(pt.RangeClosedOpen(-1, 1)) == "RangeClosedOpen(low=-1, high=1)"
+        assert repr(pt.RangeOpenClosed(-1, 1)) == "RangeOpenClosed(low=-1, high=1)"
+        assert repr(pt.Positive0) == "Positive0"
+        assert repr(pt.Positive) == "Positive"
+        assert repr(pt.NDArray(d=3, t=pt.Integer())) == "NDArray(d=3, t=Integer)"
+        assert repr(pt.Set(pt.Integer)) == "Set(els=Integer)"
+        assert repr(pt.List(pt.Integer)) == "List(t=Integer)"
+        assert repr(pt.Tuple(pt.Boolean, pt.Integer())) == "Tuple(Boolean, Integer)"
+        assert repr(pt.Dict(k=pt.String, v=pt.Positive0)) == "Dict(k=String, v=Positive0)"
+        assert repr(pt.ParametersDict({"type1": pt.Integer, "type2": pt.Boolean}, all_mandatory=True)) == "ParametersDict(params={'type1': Integer, 'type2': Boolean}, all_mandatory=True)"
+        assert repr(pt.String) == "String"
+        assert repr(pt.Identifier) == "Identifier"
+        assert repr(pt.Alphanumeric) == "Alphanumeric"
+        assert repr(pt.Latin) == "Latin"
+        
         
 class TestUtils(TestCase):
     def test_function_properties(self):
