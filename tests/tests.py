@@ -264,7 +264,9 @@ class TestTypes(TestCase):
         assert repr(pt.Dict(k=pt.String, v=pt.Positive0)) in \
             ["Dict(k=String, v=Positive0)",
              "Dict(v=Positive0, k=String)"]
-        assert repr(pt.ParametersDict({"type1": pt.Integer, "type2": pt.Boolean}, all_mandatory=True)) == "ParametersDict({'type1': Integer, 'type2': Boolean}, all_mandatory=True)"
+        assert repr(pt.ParametersDict({"type1": pt.Integer, "type2": pt.Boolean}, all_mandatory=True)) in \
+            ["ParametersDict({'type1': Integer, 'type2': Boolean}, all_mandatory=True)",
+             "ParametersDict({'type2': Boolean, 'type1': Integer}, all_mandatory=True)"]
         assert repr(pt.String) == "String"
         assert repr(pt.Identifier) == "Identifier"
         assert repr(pt.Alphanumeric) == "Alphanumeric"
