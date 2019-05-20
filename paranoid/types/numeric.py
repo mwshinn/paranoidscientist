@@ -146,7 +146,7 @@ class Range(Number):
     roundoff errors, some code may fail.
     """
     def __init__(self, low, high):
-        super().__init__(low=low, high=high)
+        super().__init__(low, high)
         assert low in Numeric() and high in Numeric(), "Invalid bounds"
         assert not (math.isnan(low) or math.isnan(high)), "Bounds can't be nan"
         assert low < high, \
