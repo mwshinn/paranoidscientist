@@ -8,7 +8,7 @@ __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
            'InitGeneric', 'Self', 'Nothing', 'Function', 'Boolean',
            'And', 'Or', 'Not']
 
-from ..exceptions import VerifyError, NoGeneratorError
+from ..exceptions import VerifyError, NoGeneratorError, InvalidTypeError
 import inspect
 
 def TypeFactory(v):
@@ -26,7 +26,7 @@ def TypeFactory(v):
         return Nothing()
     elif issubclass(type(v), Type):
         return v
-    elif issubclass(v, Type):
+    elif isinstance(v, type) and issubclass(v, Type):
         return v()
     elif issubclass(type(v), type):
         return Generic(v)

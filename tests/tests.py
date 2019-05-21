@@ -363,13 +363,24 @@ class TestDecorators(TestCase):
         assert sumlist([2, 4, 6]) == 12
         fails(lambda : sumlist([2, 3, 4]))
         fails(lambda : sumlist([3, 2, 1, 0]))
-    def test_kwarg_only(self):
-        """Test calling with keyword args only"""
-        @pd.accepts(x=pt.Integer, y=pt.Number)
-        def simple(**kwargs):
-            return kwargs['x'] + kwargs['y']
-        assert simple(x=5, y=3) == 8
-        fails(lambda : simple(3, 5))
+    def test_positionals_kwargs(self):
+        """Test calling with keyword and positional args"""
+        def extras():
+            @pd.accepts(x=pt.Integer, y=pt.Number)
+            def simple(**kwargs):
+                return kwargs['x'] + kwargs['y']
+        fails(lambda : extras())
+        def speckw():
+            @pd.accepts(kwargs=pt.Dict(k=pt.String, v=pt.Integer))
+            def simple2(**kwargs):
+                return kwargs['x'] + kwargs['y']
+        fails(lambda : speckw())
+        @pd.accepts(x=pt.Integer())
+        def kwfunc(x, *arg, **kws):
+            return x
+        kwfunc(3)
+        kwfunc(3, 5)
+        kwfunc(3, "a", b=3)
     def test_paranoidconfig(self):
         """Setting and reading config options"""
         @pd.paranoidconfig(enabled=False)
@@ -410,6 +421,16 @@ class TestDecorators(TestCase):
         #     return x
         # assert simple(5, 3) == 5
         # fails(lambda : simple(5, 6))
+    def test_function_with_defaults(self):
+        # From a previous bug whereby excluded arguments to a function
+        # with a default value would get assigned a constant of that
+        # value.
+        def make_func():
+            @pd.accepts(pt.Integer)
+            @pd.returns(pt.Integer)
+            def func(a, b={}):
+                return a
+        fails(lambda : make_func())
         
 
 class TestSettings(TestCase):

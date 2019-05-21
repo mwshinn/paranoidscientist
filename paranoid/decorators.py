@@ -163,24 +163,31 @@ def accepts(*argtypes, **kwargtypes):
     def _decorator(func):
         # @accepts decorator
         f = func.__wrapped__ if hasattr(func, "__wrapped__") else func
-        try:
-            argtypes = inspect.getcallargs(f, *theseargtypes, **thesekwargtypes)
-            argtypes = {k: v if issubclass(type(v), T.Type) else T.Constant(v)
-                        for k,v in argtypes.items()}
-        except TypeError:
-            raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % func.__qualname__)
-        # Support keyword arguments.  Find the name of the **kwargs
-        # parameter (not necessarily "kwargs") and set it to be a
-        # dictionary of unspecified types.
-        kwargname = U.get_func_kwargs_name(func)
-        if kwargname in argtypes.keys():
-            argtypes[kwargname] = T.KeywordArguments()
-        # Support positional arguments.  Find the name of the *args
-        # parameter (not necessarily "args") and set it to be an
-        # unspecified type.
-        posargname = U.get_func_posargs_name(func)
-        if posargname in argtypes.keys():
-            argtypes[posargname] = T.PositionalArguments() # TODO merge with actual argument names
+        sig = inspect.signature(f)
+        boundargs = sig.bind(*theseargtypes, **thesekwargtypes)
+        argtypes = {}
+        # Loop through each of the parameters in the function's call
+        # signature and make sure they were passed to @accepts
+        for p in sig.parameters.values():
+            # Keyword arguments get the KeywordArguments() type.
+            if p.kind == p.VAR_KEYWORD:
+                if p.name in boundargs.arguments.keys():
+                    raise E.ArgumentTypeError("Unexpected keyword arguments to @accepts in %s" % f.__qualname__)
+                argtypes[p.name] = T.KeywordArguments()
+            # Positional arguments get the PositionalArguments() type.
+            elif p.kind == p.VAR_POSITIONAL:
+                if p.name in boundargs.arguments.keys():
+                    raise E.ArgumentTypeError("Unexpected arguments to @accepts in %s" % f.__qualname__)
+                argtypes[p.name] = T.PositionalArguments()
+            # Handle all normal arguments
+            else:
+                if p.name not in boundargs.arguments.keys():
+                    raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % f.__qualname__)
+                argtypes[p.name] = T.TypeFactory(boundargs.arguments[p.name])
+        # Make sure extra arguments weren't passed to @accepts
+        if set(boundargs.arguments.keys()) - set(sig.parameters.keys()) != set():
+            raise E.ArgumentTypeError("Invalid argument specification to @accepts in %s" % f.__qualname__)
+        # Make sure @accepts hasn't already been called on this function
         if U.has_fun_prop(func, "argtypes"):
             raise ValueError("Cannot set argument types twice")
         U.set_fun_prop(func, "argtypes", argtypes)
