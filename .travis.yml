@@ -4,6 +4,7 @@ os:
 python:
   - "3.5"
   - "3.6"
+  - "3.7"
 env:
   - INST_PACKAGES=numpy pytest
   - INST_PACKAGES=pytest
