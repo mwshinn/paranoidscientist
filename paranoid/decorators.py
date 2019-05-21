@@ -340,14 +340,19 @@ def paranoidclass(cls):
         meth = getattr(cls, methname)
         if U.has_fun_prop(meth, "argtypes"):
             argtypes = U.get_fun_prop(meth, "argtypes")
-            if "self" in argtypes and isinstance(argtypes["self"], T.Self):
-                # "self" means something different in the __init__
-                # method than it does in other methods
-                if methname == "__init__":
-                    argtypes["self"] = T.InitGeneric(cls)
-                else:
-                    argtypes["self"] = T.Generic(cls)
-                U.set_fun_prop(meth, "argtypes", argtypes) # TODO Not necessary because of reference
+            for argname in argtypes.keys():
+                if isinstance(argtypes[argname], T.Self):
+                    # "self" means something different in the __init__
+                    # method than it does in other methods
+                    if methname == "__init__" and argname == "self":
+                        argtypes[argname] = T.InitGeneric(cls)
+                    else:
+                        argtypes[argname] = T.Generic(cls)
+                # Somewhat of a hack to get And/Or to work with Self
+                if isinstance(argtypes[argname], T.Or) or isinstance(argtypes[argname], T.And):
+                    for i in range(0, len(argtypes[argname].types)):
+                        if isinstance(argtypes[argname].types[i], T.Self):
+                            argtypes[argname].types[i] = T.Generic(cls)
         if U.has_fun_prop(meth, "returntype"):
             if isinstance(U.get_fun_prop(meth, "returntype"), T.Self):
                 U.set_fun_prop(meth, "returntype", T.Generic(cls))
