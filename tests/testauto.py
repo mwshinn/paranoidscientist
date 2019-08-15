@@ -114,6 +114,13 @@ def add(n, m):
 def concave(x):
     return x**2
 
+@accepts(Number)
+@returns(Void)
+@paranoidconfig(unit_test=False)
+def dont_check_me(x):
+    """Ensure unit_test=False works"""
+    return x
+
 @paranoidclass
 class MyClass:
     @accepts(Self, Number)

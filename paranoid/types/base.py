@@ -6,7 +6,7 @@
 
 __all__ = ['TypeFactory', 'Type', 'Constant', 'Unchecked', 'Generic',
            'InitGeneric', 'Self', 'Nothing', 'Function', 'Boolean',
-           'And', 'Or', 'Not']
+           'And', 'Or', 'Not', 'Maybe', 'Void']
 
 from ..exceptions import VerifyError, NoGeneratorError, InvalidTypeError
 import inspect
@@ -177,6 +177,13 @@ class Nothing(Type):
     def generate(self):
         yield None
 
+class Void(Type):
+    """Always fails."""
+    def test(self, v):
+        assert False
+    def generate(self):
+        raise NoGeneratorError
+
 # TODO expand this to define argument/return types
 class Function(Type):
     """Any function."""
@@ -238,6 +245,20 @@ class Or(Type):
         ng = (e for t in self.types for e in t.generate())
         for g in ng:
             yield g
+
+class Maybe(Or):
+    """Either the given type or None.
+
+    One Type may be passed to Maybe.  Maybe checks to see whether it
+    is either an element of the passed type or else None.  This is
+    useful for optional arguments which take None as the default
+    parameter.
+
+    """
+    def __repr__(self):
+        return "Maybe(" + repr(self.types[0]) + ")"
+    def __init__(self, typ):
+        super().__init__(typ, Nothing)
 
 class Not(Type):
     """Valid if the given type fails.

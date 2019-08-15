@@ -70,6 +70,10 @@ def test_function(func):
     if not testcases:
         print("Warning: %s could not be tested" % func.__name__)
         return 0
+    # If we have disabled unit testing for this function, don't run
+    # any tests.
+    if not Settings.get("unit_test", function=func):
+        return 0
     # If entry conditions are met, simply running the function will be
     # enough of a test, since all values are checked at runtime.  So
     # execute the function once for each combination of arguments.

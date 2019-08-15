@@ -38,6 +38,7 @@ class Settings:
     # source file instead.
     __global_setting_values = {
         'enabled' : True,
+        'unit_test' : True,
         'max_runtime': 2,
         'max_cache' : 2,
         'namespace' : {}}
@@ -46,6 +47,7 @@ class Settings:
     # these validation functions ensure that the settings are valid.
     __validate_settings = {
         'enabled' : lambda x : x in [True, False],
+        'unit_test' : lambda x : x in [True, False],
         'max_runtime' : lambda x : type(x) in [int, float] and x >= 0,
         'max_cache' : lambda x : isinstance(x, int) and x >= 0,
         'namespace' : lambda x : isinstance(x, dict) and all(isinstance(k, str) for k in x.keys())}

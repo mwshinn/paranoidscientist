@@ -168,11 +168,18 @@ class TestTypes(TestCase):
     def test_Function(self):
         """Function type"""
         assert (lambda x : x) in pt.Function()
+
+    def test_Void(self):
+        pair_fails(pt.Nothing, pt.Void)
+        pair_fails(pt.Integer, pt.Void)
+        pair_fails(pt.String, pt.Void)
+        pair_fails(pt.Boolean, pt.Void)
         
-    def test_And_Or_Not(self):
+    def test_And_Or_Not_Maybe(self):
         """And, Or, and Not types"""
         identity_test(pt.And(pt.Natural0, pt.Range(0, 10)))
         identity_test(pt.Or(pt.Boolean, pt.Range(0, 10)))
+        identity_test(pt.Maybe(pt.Range(0, 10)))
         identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(3, 5))))
         identity_test(pt.And(pt.Range(0, 10), pt.Not(pt.Range(0, 5))))
     
@@ -239,10 +246,12 @@ class TestTypes(TestCase):
         assert repr(pt.Nothing) == "Nothing"
         assert repr(pt.Function) == "Function"
         assert repr(pt.Boolean) == "Boolean"
+        assert repr(pt.Void) == "Void"
         # This assert may fail on Python versions where dict order is
         # not preserved
         assert repr(pt.And(pt.Integer, pt.Range(0, 5))) == "And(Integer, Range(0, 5))"
         assert repr(pt.Or(pt.Integer, pt.Boolean)) == "Or(Integer, Boolean)"
+        assert repr(pt.Maybe(pt.Integer)) == "Maybe(Integer)"
         assert repr(pt.Not(pt.Integer)) == "Not(Integer)"
         assert repr(pt.Numeric) == "Numeric"
         assert repr(pt.ExtendedReal) == "ExtendedReal"
