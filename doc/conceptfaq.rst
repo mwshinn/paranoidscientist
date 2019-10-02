@@ -40,8 +40,8 @@ Is Paranoid Scientist fast?
 No.  Depending on which options you enable, which features you use,
 and how your code is written, your code will run 10%--1000% slower.
 The biggest culprits for slow runtime in Paranoid Scientist are
-verification conditions involving more than one variable
-(e.g. ``return```) and functions with many arguments.
+verification conditions involving hyperproperties (e.g. ``return```)
+and functions with many arguments.
 
 However, Paranoid Scientist can easily be enabled or disabled at
 runtime with a single line of code.  When it is disabled, there is no
@@ -80,7 +80,7 @@ potential problems.
 
 Due to these different goals, the main practical difference is that
 MyPy emphasizes the machine-readable Python type of a variable,
-whereas ParanoidScientist emphasizes the human-understandable type.
+whereas Paranoid Scientist emphasizes the human-understandable type.
 Consider the following example of MyPy, which comes directly from the
 `MyPy website <http://mypy-lang.org/examples.html>`_::
 
@@ -140,7 +140,7 @@ Then when we run it, we get the following::
   >>> my_account.deposit(-5)
   Traceback (most recent call last):
       ...
-  paranoid.exceptions.ArgumentTypeError: Invalid argument type: amount=-5 is not of type <paranoid.types.numeric.Natural1 object at 0x7fd1e5bcc7b8> in BankAccount.deposit
+  paranoid.exceptions.ArgumentTypeError: Invalid argument type: amount=-5 is not of type Natural1 in BankAccount.deposit
 
 Note that this also obviates the need for the "overdrawn" function,
 because it will never allow an operation on a bank account which would
@@ -168,6 +168,8 @@ conceptually distinct:
 - Paranoid Scientist is most concerned with humans being able to
   understand the entry and exit conditions at a glance, whereas
   contracts do not have this focus.
+- Paranoid Scientist focuses on refinement types, whereas most
+  contract libraries do not.
 
 These properties give Paranoid Scientist a few unique features which
 are either awkward or impossible with contracts:
@@ -177,13 +179,13 @@ are either awkward or impossible with contracts:
   can reason about higher level properties of a function, such as
   monotonicity or concavity.
 - Paranoid Scientist can perform automated testing, whereas contracts
-  cannot
+  often cannot
 
 Is Paranoid Scientist "Pythonic"?
 ---------------------------------
 
 While the concept of types are generally considered non-Pythonic,
-Paranoid Scientist's types can be thought of as the duck typed type
+Paranoid Scientist's types can be thought of as the duck-typed type
 system.
 
 In general, Pythonic code relies on duck typing, which is great in
@@ -223,4 +225,4 @@ By contrast, the type system in Paranoid Scientist only mandates that
 types act like some specific concept which is understandable to humans
 in particular situations.  For example, if it looks like a Number and
 quacks like a Number, then it doesn't matter whether the underlying
-datatype is a float or an int.
+datatype is a float or an int or a numpy uint16.

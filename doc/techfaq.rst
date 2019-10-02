@@ -82,5 +82,5 @@ subclassing int, you clearly know what you are doing and should know
 that this will cause many things to fail in general.
 
 If you come across an example in production code where Paranoid
-Scientist's type system becomes misleading, if the example is
-not rare or contrived, please report this as a bug.
+Scientist's type system becomes misleading, and if the example is not
+rare or contrived, please report this as a bug.

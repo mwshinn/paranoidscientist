@@ -70,6 +70,7 @@ type ``Self`` should be used for the ``self`` arguments in class methods::
 
   @paranoidclass
   class Point:
+      @accepts(Self, Number, Number)
       def __init__(self, x, y):
           self.x = x
           self.y = y
@@ -82,13 +83,6 @@ type ``Self`` should be used for the ``self`` arguments in class methods::
              self.y < ymax:
               return True
           return False
-
-Currently, Paranoid Scientist does not operate on the ``__init__``
-method.  This is because, unlike all other methods in a class, the
-``self`` argument does not represent a fully instantiated class.  In
-other words, the purpose of the ``__init__`` function is to help create
-the ``self`` object, and therefore it does not make sense to test
-whether the ``self`` object is valid, because clearly it is not.
 
 Note also that specifications to ``@accepts`` can optionally be passed
 with keyword arguments.  In the above case, the following are
@@ -215,6 +209,7 @@ into a type::
 
   @paranoidclass
   class Point:
+      @accepts(Self, Number, Number)
       def __init__(self, x, y):
           self.x = x
           self.y = y
@@ -423,7 +418,8 @@ Among the four types of conditions which can be imposed upon functions
 (argument types, return types, entry conditions, and exit conditions),
 exit conditions are unique in that they can also use *previous* values
 from a function's execution to test more complex properties of the
-function.
+function.  Conditions which use this feature are often called
+"hyperproperties".
 
 In order to use a previous value within exit conditions, add a
 backtick after the variable name, e.g. ``x`` is the current value and

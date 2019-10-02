@@ -10,51 +10,47 @@ Paranoid Scientist
    :class: align-right
    :width: 30%
 
-Paranoid Scientist is a Python module which allows runtime
-verification of entry and exit condition contracts for Python using
-refinement types, and prioritizes the interpretation of types over
-their representation.  More specifically, it provides the following:
+Paranoid Scientist is a Python module for verifying scientific
+software which provides:
 
-- Verification of arbitrary **entry and exit conditions**, including more
-  complex expressions with universal quantification.
-- Function arguments and return types specified using **refinement
-  types**, which emphasizes the *meaning* of the type instead of the
-  *data structure* of the type.
-- **Automated testing** of individual functions to determine, before
-  execution of the program, whether functions conform to their
-  specification.
-- A simple and clear function `decorator notation
-  <techfaq.html#why-didn-t-you-use-python-s-built-in-type-syntax>`_
+- Runtime **verification of entry and exit conditions** written in
+  pure Python, including hyperproperties.
+- Conditions specified using pure Python **refinement types**,
+  i.e. types are defined by predicates.
+- **Automated unit testing** of individual functions.
 
-It shares inspiration (but is still quite distinct) from
-`contract-oriented programming
+It is inspired by `contract-oriented programming
 <conceptfaq.html#how-does-paranoid-scientist-differ-from-using-contracts-e-g-pycontracts>`_,
 type classes, `static type checking
 <conceptfaq.html#how-is-paranoid-scientist-different-from-mypy>`_, and
 fuzz testing.
 
 To learn more, read the :ref:`tutorial<Tutorial>` or check out the
-:ref:`conceptual<Conceptual FAQs>` or :ref:`technical<Technical FAQs>`
-FAQs.
+:ref:`conceptual FAQs<Conceptual FAQs>` or :ref:`technical
+FAQs<Technical FAQs>`.  Also see the `preprint on arXiv
+<https://arxiv.org/abs/1909.00427>`_ for more technical details.
 
-What is the point?
-------------------
+Why verify scientific software?
+-------------------------------
 
 Paranoid Scientist is a tool to make sure scientific code is correct.
-Traditional program verification asks the question, "If I run my code,
-will it run correctly?"  It can be used to verify, for instance, that
-a compiler will always produce the expected output.  In practice, it
-can take a lot of time to verify programs and requires the use of
-specific programming languages and constructs.
+Verification is extremely important for scientific software because,
+unlike most software, we don't know what the output will be until we
+run the program.  In fact, the program is written in order to examine
+the output. However, we have no robust way of knowing whether the
+output is due to a software bug.  For example, code performing a
+complex statistical test could normalize the wrong column, an error
+which would likely go undetected.
 
-In scientific programming, verification is especially important
-because we do not know the expected results of a computation, so it is
-difficult to know whether any results are due to software bugs.  Thus,
-with a slightly different goal, we can relax the question above and
-instead ask, "If I already ran my code, did it run correctly?"  In
-other words, it is not as important to know before executing the
-program whether it will run correctly, but if the program gives a
-result, we want to know that this result is correct.
+Paranoid Scientist attempts to remedy this situation by providing some
+key tools from the software verification community to the scientific
+community.  Traditional program verification asks the question, "If I
+run my code, will it run correctly?"  In practice, this is time
+consuming and requires highly specialized training.  For scientific
+programming, it is acceptable to instead ask, "If I already ran my
+code, did it run correctly?"  In other words, it is not as important
+to know before executing the program whether it will run correctly.
+Paranoid Scientist is already in use in scientific software.
 
 Quick examples
 --------------
@@ -62,61 +58,70 @@ Quick examples
 Paranoid Scientist is used to programmatically define and verify
 function entry and exit conditions.  Here are some simple examples::
 
-  from paranoid.types import Number, Positive, Natural1, Natural0, Range
-  from paranoid.decorators import accepts, returns, requires, ensures, paranoidclass
-  from math import nan, inf
-  
-  @accepts(x=Number, y=Number)
-  @returns(Positive)
-  @requires("x != y")
-  def some_formula(x, y):
-      return 1/((x-y)**2)
-  
+Cube an integer
+~~~~~~~~~~~~~~~
+
+We ensure that the "cube" function accepts and returns numbers
+(i.e. integers or floats, but not NaN or ±inf), and that it is
+monotonic::
+
+  from paranoid.types import Number
+  from paranoid.decorators import accepts, returns, ensures
   @accepts(Number)
   @returns(Number)
   @ensures("x >= x` --> return >= return`") # Test for monotonicity
   def cube(x):
       return x**3
-  
-  # `flips` must be a natural number, but not 0
-  # `p_heads` must be between 0 and 1 inclusive
-  @accepts(Natural1, Range(0, 1))
-  # Returns a natural number, which may be 0
-  @returns(Natural0)
-  # We can never have more heads than flips
-  @ensures("return <= flips")
-  # If we have a zero probability, we get zero heads
-  @ensures("p_heads == 0 --> return == 0")
-  def biased_coin(flips, p_heads=0.5):
-      """Expected number of heads from biased coin flips.
-      
-      `flips` should be the number of times to flip the coin.
-      `p_heads` should be the probability of getting heads on one flip.
-      """
-      return round(flips * p_heads)
 
-Running some of these functions::
+Running this function for correct and incorrect input, we get::
 
-  >>> some_formula(1, 2.0)
-  1.0
-  >>> some_formula(5.0, 5)
-  Traceback (most recent call last):
-  ...
-  paranoid.exceptions.EntryConditionsError: Function requirement 'x != y' failed in some_formula
-  params: {'x': 5, 'y': 5.0}
   >>> cube(3)
   27
-  >>> cube(nan)
+  >>> import math
+  >>> cube(math.nan)
   Traceback (most recent call last):
   ...
-  paranoid.exceptions.ArgumentTypeError: Invalid argument type: x=nan is not of type <paranoid.types.numeric.Number object at 0x7f0068d622e8> in cube
+  paranoid.exceptions.ArgumentTypeError: Invalid argument type: x=nan is not of type Number in cube
+
+Biased coin
+~~~~~~~~~~~
+
+We can also verify stochastic functions.  Suppose we perform `flips`
+flips of a biased coin which has a `p_heads` probability of showing
+heads.  How many times do we get heads?
+
+The argument `flips` must be a natural number greater than zero, and
+`p_heads` must be a number between 0 and 1 inclusive.  This must
+return a natural number greater than or equal to zero.  Additionally,
+we check that the number of heads returned must always be less than or
+equal to the number of flips, and that if our probability of getting
+heads is zero, then we don't get any heads::
+
+  from paranoid.types import Natural0, Natural1, Range
+  from paranoid.decorators import accepts, returns, ensures
+  import random
+  @accepts(Natural1, Range(0, 1))
+  @returns(Natural0)
+  @ensures("return <= flips")
+  @ensures("p_heads == 0 --> return == 0")
+  def biased_coin(flips, p_heads=0.5):
+      return sum([random.random() < p_heads for _ in range(flips)])
+
+Running several examples, we see::
+
   >>> biased_coin(3, 1)
   3
   >>> biased_coin(3, 1+1e50)
   Traceback (most recent call last):
   ...
-  paranoid.exceptions.ArgumentTypeError: Invalid argument type: p_heads=1e+50 is not of type <paranoid.types.numeric.Range object at 0x7f0068d624a8> in biased_coin
+  paranoid.exceptions.ArgumentTypeError: Invalid argument type: p_heads=1e+50 is not of type Range(0, 1) in biased_coin
 
+More examples
+~~~~~~~~~~~~~
+
+For more more realistic toy examples, see `examples in the preprint
+<https://arxiv.org/abs/1909.00427>`_.  To see Paranoid Scientist in
+action, see `PyDDM <https://pyddm.readthedocs.io/en/latest/>`_ or `Matplotlib Canvas <https://github.com/mwshinn/canvas>`_.
 
 .. toctree::
    :maxdepth: 2
