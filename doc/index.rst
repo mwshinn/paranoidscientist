@@ -58,8 +58,8 @@ Quick examples
 Paranoid Scientist is used to programmatically define and verify
 function entry and exit conditions.  Here are some simple examples::
 
-Cube an integer
-~~~~~~~~~~~~~~~
+Cube a number
+~~~~~~~~~~~~~
 
 We ensure that the "cube" function accepts and returns numbers
 (i.e. integers or floats, but not NaN or ±inf), and that it is
