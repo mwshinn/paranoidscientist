@@ -12,8 +12,11 @@ software which provides:
   i.e. types are defined by predicates.
 - **Automated unit testing** of individual functions.
 
-To learn more, read the [documentation](https://paranoid-scientist.readthedocs.io/en/latest/), [conceptual FAQs](https://paranoid-scientist.readthedocs.io/en/latest/conceptfaq.html), [technical FAQs](https://paranoid-scientist.readthedocs.io/en/latest/techfaq.html), or [tutorial](https://paranoid-scientist.readthedocs.io/en/latest/tutorial.html), or see the [preprint on arXiv](https://arxiv.org/abs/1909.00427) for more technical details.
+To learn more, read the [documentation](https://paranoid-scientist.readthedocs.io/en/latest/), [conceptual FAQs](https://paranoid-scientist.readthedocs.io/en/latest/conceptfaq.html), [technical FAQs](https://paranoid-scientist.readthedocs.io/en/latest/techfaq.html), or [tutorial](https://paranoid-scientist.readthedocs.io/en/latest/tutorial.html), or see the [paper](https://link.springer.com/chapter/10.1007%2F978-3-030-41600-3_10)/[preprint](https://arxiv.org/abs/1909.00427) for more technical details.
 
+If you use Paranoid Scientist in an academic work, please cite:
+
+> Shinn M. (2020) Refinement Type Contracts for Verification of Scientific Investigative Software. In: Chakraborty S., Navas J. (eds) Verified Software. Theories, Tools, and Experiments. VSTTE 2019. Lecture Notes in Computer Science, vol 12031. Springer, Cham. DOI: 10.1007/978-3-030-41600-3_10
 
 ## System requirements
 
