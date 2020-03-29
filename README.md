@@ -27,6 +27,6 @@ If you use Paranoid Scientist in an academic work, please cite:
 ## License
 
 All code is available under the MIT license.  See LICENSE.txt for more
-information.  Code is copyright 2018-2019 Max Shinn.  The logo is
-copyright 2018 Anastasia Ershova.
+information.  Paranoid Scientist is copyright 2018-2020 Max Shinn.
+The logo is copyright 2018 Anastasia Ershova.
 

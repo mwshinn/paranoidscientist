@@ -27,8 +27,10 @@ fuzz testing.
 
 To learn more, read the :ref:`tutorial<Tutorial>` or check out the
 :ref:`conceptual FAQs<Conceptual FAQs>` or :ref:`technical
-FAQs<Technical FAQs>`.  Also see the `preprint on arXiv
-<https://arxiv.org/abs/1909.00427>`_ for more technical details.
+FAQs<Technical FAQs>`.  Also see the `paper
+<https://link.springer.com/chapter/10.1007%2F978-3-030-41600-3_10>`_
+or `preprint <https://arxiv.org/abs/1909.00427>`_ for more technical
+details.
 
 Why verify scientific software?
 -------------------------------
@@ -119,9 +121,12 @@ Running several examples, we see::
 More examples
 ~~~~~~~~~~~~~
 
-For more more realistic toy examples, see `examples in the preprint
-<https://arxiv.org/abs/1909.00427>`_.  To see Paranoid Scientist in
-action, see `PyDDM <https://pyddm.readthedocs.io/en/latest/>`_ or `Matplotlib Canvas <https://github.com/mwshinn/canvas>`_.
+For more more realistic toy examples, see examples in the `paper
+<https://link.springer.com/chapter/10.1007%2F978-3-030-41600-3_10>`_
+or `preprint <https://arxiv.org/abs/1909.00427>`_.  To see Paranoid
+Scientist in action, see `PyDDM
+<https://pyddm.readthedocs.io/en/latest/>`_ or `Matplotlib Canvas
+<https://github.com/mwshinn/canvas>`_.
 
 .. toctree::
    :maxdepth: 2
