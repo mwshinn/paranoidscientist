@@ -181,10 +181,10 @@ class Range(Number):
             "than %f and less than %f" % (v, self.low, self.high)
     def test_numpy(self, v):
         super().test_numpy(v)
-        assert np.all(self.low <= v), "Values %f must be greater" \
-            "than %f" % (v, self.low)
-        assert np.all(v <= self.high), "Values %f must be less" \
-            "than %f" % (v, self.high)
+        assert np.all(self.low <= v), "Values %s must be greater" \
+            "than %f" % (repr(v), self.low)
+        assert np.all(v <= self.high), "Values %s must be less" \
+            "than %f" % (repr(v), self.high)
     def generate(self):
         EPSILON = 1e-5
         if not math.isinf(self.low):

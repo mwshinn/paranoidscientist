@@ -43,10 +43,11 @@ def _check_requires(func, argvals):
         full_globals.update(argvals)
         #full_locals = locals().copy()
         #full_locals.update({k : v for k,v in zip(argspec.args, args)})
-        for requirement,requirementtext in U.get_fun_prop(func, "requires"):
+        for requirement,requirementtext,requirementdesc in U.get_fun_prop(func, "requires"):
             try:
                 if not eval(requirement, full_globals, {}):
-                    raise E.EntryConditionsError("Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(argvals)))
+                    desctext = requirementdesc+"\n" if requirementdesc is not None else ""
+                    raise E.EntryConditionsError(desctext+"Function requirement '%s' failed in %s\nparams: %s" % (requirementtext,  func.__qualname__, str(argvals)))
             except Exception as e:
                 if isinstance(e, E.EntryConditionsError):
                     raise
@@ -214,12 +215,18 @@ def returns(returntype):
     return _decorator
 
 # Adds the "requires" property: list of (compiledcondition, conditiontext)
-def requires(condition):
+def requires(condition, description=None):
     """A function decorator to specify entry conditions for the function.
 
     Entry conditions should be a string, which will be evaluated as
     Python code.  Arguments of the function may be accessed by their
     name.
+
+    Optionally, the second argument ("description") may describe the
+    requirement in human-understandable language.  This will be displayed in
+    the error message, and may make it easier to debug software, or for users
+    to know without looking at the code what may be wrong with the function
+    call.
 
     The special syntax "-->" and "<-->" may be used to mean "if" and
     "if and only if", respectively.  They may not be contained within
@@ -239,8 +246,9 @@ def requires(condition):
       | @requires("log_transform == True --> min(l) > 0")
       | def process_list(l, log_transform=False):
       |     ...
+
     """
-    def _decorator(func, condition=condition):
+    def _decorator(func, condition=condition, description=description):
         # @requires decorator
         if U.has_fun_prop(func, "requires"):
             if not isinstance(U.get_fun_prop(func, "requires"), list):
@@ -258,7 +266,7 @@ def requires(condition):
             assert len(condition_parts) == 2, "Only one implies per statement in %s condition %s" % (base_condition, func.__qualname__)
             condition = "(%s) if (%s) else True" % (condition_parts[1], condition_parts[0])
 
-        U.set_fun_prop(func, "requires", [(compile(condition, '', 'eval'), condition)]+base_requires)
+        U.set_fun_prop(func, "requires", [(compile(condition, '', 'eval'), condition, description)]+base_requires)
         return _wrap(func)
     return _decorator
 
