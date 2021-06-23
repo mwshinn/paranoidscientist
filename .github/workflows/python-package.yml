@@ -31,4 +31,4 @@ jobs:
         python -m pip install  ${{ matrix.package-list }}
     - name: Run tests
       run: |
-        ./runtests
+        ./runtests.sh
