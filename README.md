@@ -1,8 +1,5 @@
 # <img alt="Paranoid Scientist" src="https://raw.githubusercontent.com/mwshinn/paranoidscientist/master/doc/images/paranoid_scientist_mini_small.png" width="400">
 
-[![Build Status](https://travis-ci.com/mwshinn/paranoidscientist.svg?branch=master)](https://travis-ci.com/mwshinn/paranoidscientist) 
-[![Build status](https://ci.appveyor.com/api/projects/status/0357mlwfdglkg6ds?svg=true)](https://ci.appveyor.com/project/mwshinn/paranoidscientist)
-
 Paranoid Scientist is a Python module for verifying scientific
 software which provides:
 
