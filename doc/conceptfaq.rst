@@ -40,7 +40,7 @@ Is Paranoid Scientist fast?
 No.  Depending on which options you enable, which features you use,
 and how your code is written, your code will run 10%--1000% slower.
 The biggest culprits for slow runtime in Paranoid Scientist are
-verification conditions involving hyperproperties (e.g. ``return```)
+verification conditions involving hyperproperties (e.g. ``return``)
 and functions with many arguments.
 
 However, Paranoid Scientist can easily be enabled or disabled at
