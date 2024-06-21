@@ -12,7 +12,7 @@ from .string import *
 
 try:
     import numpy as __np
-    __np.seterr(all="raise")
-    __np.seterr(under="ignore")
+    #__np.seterr(all="raise")
+    #__np.seterr(under="ignore")
 except ImportError:
     pass

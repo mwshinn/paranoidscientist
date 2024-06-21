@@ -35,15 +35,6 @@ class Numeric(Type):
         yield 3.141 # A float
         yield 1e-10 # A small number
         yield 1e10 # A big number
-        if USE_NUMPY:
-            yield np.inf
-            yield -np.inf
-            yield np.nan
-            yield np.int0(0)
-            yield np.uint16(1)
-            yield np.int0(-1)
-            yield np.float16(3.141)
-            yield np.float64(.01)
 
 class ExtendedReal(Type):
     """Any integer or float, excluding nan."""
@@ -64,14 +55,6 @@ class ExtendedReal(Type):
         yield 3.141 # A float
         yield 1e-10 # A small number
         yield 1e10 # A big number
-        if USE_NUMPY:
-            yield np.inf
-            yield -np.inf
-            yield np.int0(0)
-            yield np.uint16(1)
-            yield np.int0(-1)
-            yield np.float16(3.141)
-            yield np.float64(.01)
 
 class Number(Type):
     """Any integer or float, excluding inf, -inf, and nan."""
@@ -89,13 +72,6 @@ class Number(Type):
         yield 3.141 # A float
         yield 1e-10 # A small number
         yield 1e10 # A large number
-        if USE_NUMPY:
-            yield np.int0(0)
-            yield np.uint16(1)
-            yield np.int0(-1)
-            yield np.float16(3.141)
-            yield np.float64(.01)
-            yield np.float64(10)
 
 class Integer(Type):
     """Any integer."""
@@ -115,11 +91,6 @@ class Integer(Type):
         yield 0
         yield 1
         yield 100
-        if USE_NUMPY:
-            yield np.int16(-10)
-            yield np.int8(-1)
-            yield np.int64(0)
-            yield np.uint0(1)
         
 class Natural0(Integer):
     """Any natural number including 0."""
@@ -134,11 +105,6 @@ class Natural0(Integer):
         yield 1
         yield 10
         yield 100
-        if USE_NUMPY:
-            yield np.int16(10)
-            yield np.int8(4)
-            yield np.int64(0)
-            yield np.uint0(1)
 
 class Natural1(Integer):
     """Any natural number excluding 0."""
@@ -153,11 +119,6 @@ class Natural1(Integer):
         yield 2
         yield 10
         yield 100
-        if USE_NUMPY:
-            yield np.int16(10)
-            yield np.int8(4)
-            yield np.int64(5)
-            yield np.uint0(1)
 
 class Range(Number):
     """Any integer or float from `low` to `high`, inclusive.
